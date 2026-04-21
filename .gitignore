@@ -1,4 +1,6 @@
 venv/
+.venv/
+
 .dbsqlite
 __pycache__/
 *.pyc

@@ -1,0 +1,5 @@
+class {{ camel_case_app_name }}Service:
+    """Business logic layer for {{ app_name }}."""
+
+    def __init__(self):
+        pass

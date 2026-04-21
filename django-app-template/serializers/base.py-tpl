@@ -1,0 +1,11 @@
+from core.serializers import BaseModelSerializer
+
+from ..models import Base{{ camel_case_app_name }}Model
+
+
+class {{ camel_case_app_name }}BaseSerializer(BaseModelSerializer):
+    """Base serializer for {{ app_name }}."""
+
+    class Meta:
+        model = Base{{ camel_case_app_name }}Model
+        fields = "__all__"

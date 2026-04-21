@@ -1,0 +1,9 @@
+from django.urls import path
+
+from .views import {{ camel_case_app_name }}BaseView
+
+app_name = "{{ app_name }}"
+
+urlpatterns = [
+    path("", {{ camel_case_app_name }}BaseView.as_view(), name="base"),
+]

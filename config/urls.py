@@ -1,5 +1,5 @@
 """
-URL configuration for studyzone project.
+URL configuration for config project.
 
 The `urlpatterns` list routes URLs to views. For more information please see:
     https://docs.djangoproject.com/en/6.0/topics/http/urls/
@@ -15,8 +15,12 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
+from django.urls import include, path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    # Feature app routes; add includes as apps are created.
+    # path('api/payments/', include('apps.payments.urls')),
+    # path('api/users/', include('apps.users.urls')),
+    # path('api/notifications/', include('apps.notifications.urls')),
 ]

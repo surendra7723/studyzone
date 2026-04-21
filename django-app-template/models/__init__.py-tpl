@@ -1,0 +1,3 @@
+from .base import Base{{ camel_case_app_name }}Model
+
+__all__ = ["Base{{ camel_case_app_name }}Model"]

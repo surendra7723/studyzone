@@ -1,0 +1,8 @@
+from core.views import BaseAPIView
+
+
+class {{ camel_case_app_name }}BaseView(BaseAPIView):
+    """Base view for {{ app_name }} with standard response helpers."""
+
+    def get(self, request, *args, **kwargs):
+        return self.success(data={"app": "{{ app_name }}"})

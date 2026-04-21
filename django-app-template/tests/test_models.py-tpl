@@ -1,0 +1,6 @@
+from django.test import TestCase
+
+
+class {{ camel_case_app_name }}ModelTest(TestCase):
+    """Unit tests for {{ app_name }} models."""
+    pass

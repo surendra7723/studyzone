@@ -1,0 +1,3 @@
+from .base import {{ camel_case_app_name }}Service
+
+__all__ = ["{{ camel_case_app_name }}Service"]

@@ -1,0 +1,6 @@
+from rest_framework.test import APITestCase
+
+
+class {{ camel_case_app_name }}ViewTest(APITestCase):
+    """Integration tests for {{ app_name }} views."""
+    pass

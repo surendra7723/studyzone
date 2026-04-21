@@ -1,0 +1,10 @@
+from django.db import models
+from core.models import TimeStampedModel
+
+
+class Base{{ camel_case_app_name }}Model(TimeStampedModel):
+    """Base model for {{ app_name }}. Inherits timestamps from core."""
+
+    class Meta:
+        abstract = True
+        app_label = "{{ app_name }}"
