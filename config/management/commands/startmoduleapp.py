@@ -53,4 +53,4 @@ class Command(StartAppCommand):
             apps_file.write_text(content, encoding="utf-8")
 
         self.stdout.write(self.style.SUCCESS(f"Created modular app: {target_dir}"))
-        self.stdout.write(f"Add to INSTALLED_APPS: \"{dest}.{app_name}\"")
+        self.stdout.write(f'Add to INSTALLED_APPS: "{dest}.{app_name}"')
