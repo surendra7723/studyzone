@@ -15,6 +15,7 @@ class PomodoroSessionSerializer(serializers.ModelSerializer):
             "active_minutes",
             "break_minutes",
         )
+        read_only_fields = ("id", "user", "start_time")
 
 
 class TaskSessionSerializer(serializers.ModelSerializer):

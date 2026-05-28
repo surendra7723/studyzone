@@ -1,4 +1,5 @@
 from django.core.validators import MinValueValidator
+from django.core.validators import RegexValidator
 from django.db import models
 from django.contrib.auth.models import AbstractUser
 
@@ -6,6 +7,20 @@ from django.contrib.auth.models import AbstractUser
 # Create your models here.
 class User(AbstractUser):
     is_deleted = models.BooleanField(default=False)
+    phone_number = models.CharField(
+        max_length=15,
+        blank=True,
+        null=True,
+        unique=True,
+        validators=[
+            RegexValidator(
+                regex=r"^\+[1-9]\d{1,14}$",
+                message="Phone number must be in E.164 format, for example +15551234567.",
+            )
+        ],
+    )
+    is_email_verified = models.BooleanField(default=False)
+    is_phone_verified = models.BooleanField(default=False)
 
     def __str__(self):
         return self.username

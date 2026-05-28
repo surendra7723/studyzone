@@ -17,11 +17,42 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import path
+from rest_framework.routers import DefaultRouter
+from rest_framework_simplejwt.views import (
+    TokenObtainPairView,
+    TokenRefreshView,
+    TokenVerifyView,
+)
+from drf_spectacular.views import (
+    SpectacularAPIView,
+    SpectacularRedocView,
+    SpectacularSwaggerView,
+)
+
+from apps.user.views import AdminUserViewSet, UserViewSet, register_user
+
+
+router = DefaultRouter()
+router.register(r"api/users", UserViewSet, basename="users")
+router.register(r"api/admin/users", AdminUserViewSet, basename="admin-users")
 
 urlpatterns = [
     path("admin/", admin.site.urls),
-    # Feature app routes; add includes as apps are created.
-    # path('api/payments/', include('apps.payments.urls')),
-    # path('api/users/', include('apps.users.urls')),
-    # path('api/notifications/', include('apps.notifications.urls')),
+    path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
+    path(
+        "api/docs/swagger/",
+        SpectacularSwaggerView.as_view(url_name="schema"),
+        name="swagger-ui",
+    ),
+    path(
+        "api/docs/redoc/",
+        SpectacularRedocView.as_view(url_name="schema"),
+        name="redoc",
+    ),
+    path("api/auth/register/", register_user, name="register_user"),
+    path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
+    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
+    path("api/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
 ]
+
+urlpatterns += router.urls
