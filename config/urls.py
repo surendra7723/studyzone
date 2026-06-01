@@ -29,7 +29,8 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from apps.user.views import AdminUserViewSet, UserViewSet, register_user
+from apps.user.views import AdminUserViewSet, UserViewSet
+from debug_toolbar.toolbar import debug_toolbar_urls
 
 
 router = DefaultRouter()
@@ -49,10 +50,9 @@ urlpatterns = [
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
-    path("api/auth/register/", register_user, name="register_user"),
     path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
-]
+] + debug_toolbar_urls()
 
 urlpatterns += router.urls

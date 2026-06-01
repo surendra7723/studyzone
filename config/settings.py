@@ -31,6 +31,12 @@ DEBUG = True
 
 ALLOWED_HOSTS = []
 
+# Debug toolbar configuration
+INTERNAL_IPS = [
+    "127.0.0.1",
+    "localhost",
+]
+
 # Application definition
 INSTALLED_APPS = [
     "django.contrib.admin",
@@ -48,6 +54,7 @@ INSTALLED_APPS = [
     "config.apps.ConfigConfig",
     "apps.tasks.apps.TasksConfig",
     "apps.pomodoro.apps.PomodoroConfig",
+    "debug_toolbar",
 ]
 
 # Make django-extensions use IPython by default in shell_plus.
@@ -61,6 +68,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -93,6 +101,14 @@ REST_FRAMEWORK = {
         "rest_framework.permissions.IsAuthenticated",
     ),
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+    "DEFAULT_THROTTLE_CLASSES": (
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ),
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": os.getenv("DRF_THROTTLE_ANON", "100/hour"),
+        "user": os.getenv("DRF_THROTTLE_USER", "1000/hour"),
+    },
 }
 
 # JWT Configuration
@@ -111,6 +127,30 @@ SPECTACULAR_SETTINGS = {
     "DESCRIPTION": "API documentation for the Studyzone backend.",
     "VERSION": "1.0.0",
 }
+
+# Email verification settings
+EMAIL_VERIFICATION_URL_BASE = os.getenv(
+    "EMAIL_VERIFICATION_URL_BASE", "http://localhost:8000"
+)
+EMAIL_VERIFICATION_TOKEN_TTL_MINUTES = int(
+    os.getenv("EMAIL_VERIFICATION_TOKEN_TTL_MINUTES", "30")
+)
+EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS = int(
+    os.getenv("EMAIL_VERIFICATION_RESEND_COOLDOWN_SECONDS", "60")
+)
+
+# Social auth settings
+SOCIAL_AUTH_ENABLED = os.getenv("SOCIAL_AUTH_ENABLED", "true").lower() == "true"
+GOOGLE_CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID", "")
+FACEBOOK_APP_ID = os.getenv("FACEBOOK_APP_ID", "")
+FACEBOOK_APP_SECRET = os.getenv("FACEBOOK_APP_SECRET", "")
+SOCIAL_LINK_CONFIRM_URL_BASE = os.getenv(
+    "SOCIAL_LINK_CONFIRM_URL_BASE", EMAIL_VERIFICATION_URL_BASE
+)
+SOCIAL_LINK_TOKEN_TTL_MINUTES = int(os.getenv("SOCIAL_LINK_TOKEN_TTL_MINUTES", "30"))
+SOCIAL_LINK_RESEND_COOLDOWN_SECONDS = int(
+    os.getenv("SOCIAL_LINK_RESEND_COOLDOWN_SECONDS", "60")
+)
 
 # Email configuration for local Mailpit verification.
 EMAIL_BACKEND = os.getenv(

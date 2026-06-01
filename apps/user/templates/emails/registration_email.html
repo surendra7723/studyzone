@@ -1,0 +1,50 @@
+{% extends "emails/base_email.html" %}
+
+{% block email_subject %}Welcome to Studyzone - Account Created{% endblock %}
+
+{% block header_title %}Welcome to Studyzone! 🎉{% endblock %}
+
+{% block header_subtitle %}Your account is ready to go{% endblock %}
+
+{% block email_body %}
+<h2>Hello {{ user.username }}!</h2>
+
+<p>Thank you for signing up for <span class="highlight">Studyzone</span>. Your account has been successfully created.</p>
+
+<p>You can now log in and start boosting your productivity with our powerful study and task management tools.</p>
+
+{% if verify_url %}
+<p>Please verify your email address to secure your account and unlock all features.</p>
+<p>
+    <a href="{{ verify_url }}" class="cta-button">Verify Email Address</a>
+</p>
+<p style="font-size: 12px; color: #777; word-break: break-all;">
+    If the button does not work, copy and paste this link:<br>
+    {{ verify_url }}
+</p>
+{% endif %}
+
+<h3 style="font-size: 16px; margin-top: 25px; margin-bottom: 15px; color: #333;">Getting Started</h3>
+
+<p>Here are a few things you can do next:</p>
+
+<ul style="margin-left: 20px; margin-bottom: 20px;">
+    <li>Complete your profile to personalize your experience</li>
+    <li>Create your first study session or task</li>
+    <li>Set your preferred Pomodoro timer durations</li>
+    <li>Explore our documentation for tips and tricks</li>
+</ul>
+
+<p>If you're running Studyzone locally, you can verify this email was delivered via Mailpit.</p>
+
+<p style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e0e0e0;">
+    If you have any questions or need help, feel free to reach out to our support team.<br>
+    We're here to help you succeed!
+</p>
+
+<p style="margin-top: 20px; font-size: 13px; color: #999;">
+    <strong>Account Details:</strong><br>
+    Username: {{ user.username }}<br>
+    Email: {{ user.email }}{% if user.phone_number %}<br>Phone: {{ user.phone_number }}{% endif %}
+</p>
+{% endblock %}

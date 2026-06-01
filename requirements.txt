@@ -7,6 +7,8 @@ djangorestframework==3.17.1
 djangorestframework-simplejwt==5.5.1
 drf-spectacular==0.27.0
 flake8==6.1.0
+google-auth==2.41.1
+requests==2.32.5
 mccabe==0.7.0
 mypy_extensions==1.1.0
 packaging==26.2
