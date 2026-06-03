@@ -65,6 +65,7 @@ class UserViewSet(viewsets.ViewSet):
 			status=status.HTTP_200_OK,
 		)
 
+	@action(detail=False,methods=["get", "post"], permission_classes=[AllowAny], url_path="verify-phone")
 	@action(
 		detail=False,
 		methods=["post"],
@@ -79,6 +80,7 @@ class UserViewSet(viewsets.ViewSet):
 			{"detail": "If an unverified account exists, a verification email has been sent."},
 			status=status.HTTP_200_OK,
 		)
+  
 
 	@extend_schema(
 		request=GoogleAuthSerializer,

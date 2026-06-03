@@ -1,8 +1,11 @@
 import re
 import secrets
 import hashlib
+import logging
 from datetime import timedelta
+from threading import local
 
+from twilio.rest import Client
 import requests
 from django.conf import settings
 from django.db import IntegrityError, transaction
@@ -18,6 +21,7 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from .models import SocialAccount, SocialLinkIntent, UserProfile, VerificationToken
 
 User = get_user_model()
+logger = logging.getLogger(__name__)
 
 PHONE_E164_PATTERN = r"^\+[1-9]\d{1,14}$"
 SOCIAL_PROVIDER_CHOICES = [
@@ -298,6 +302,17 @@ def issue_email_verification_token(user):
     )
     return raw_token
 
+def issue_phone_verification_token(user):
+    raw_token = f"{secrets.randbelow(900000) + 100000}"  # 6-digit code
+    token_hash = _hash_token(raw_token)
+
+    VerificationToken.objects.create(
+        user=user,
+        channel=VerificationToken.CHANNEL_PHONE,
+        token_hash=token_hash,
+        expires_at=_verification_expiry(),
+    )
+    return raw_token
 
 def send_registration_email(user, raw_verification_token):
     verify_url = (
@@ -322,6 +337,54 @@ def send_registration_email(user, raw_verification_token):
         fail_silently=False,
     )
 
+
+def send_phone_verification_sms(user, raw_verification_token):
+    if getattr(settings, "MOCK_TWILIO", False):
+        logger.info(
+            f"(MOCK) Sent phone verification SMS to user {user.id} at {user.phone_number}: {raw_verification_token}"
+        )
+        subject = f"Mock SMS to {user.phone_number}"
+        email_body = f"From:{settings.TWILIO_FROM_NUMBER}\nTo: {user.phone_number}\n\nYour Studyzone verification code is: {raw_verification_token}"
+        send_mail(
+            subject=subject,
+            message=email_body,
+            from_email='twilio-mock@local.dev',
+            recipient_list=[f'twilio-mock@local.dev'],
+            fail_silently=False,
+        )
+        return type('MockSMS',(),{"sid": "MOCK_123456789_LOCAL"})()
+
+    else:
+        try:
+            client = Client(settings.TWILIO_ACCOUNT_SID, settings.TWILIO_AUTH_TOKEN)
+            message = client.messages.create(
+                body=(
+                    f"Your Studyzone verification code is: {raw_verification_token}. "
+                    f"Please enter this code to verify your phone number."
+                ),
+                from_=settings.TWILIO_PHONE_NUMBER,
+                to=user.phone_number,
+            )
+            logger.info(
+                f"Sent phone verification SMS to user {user.id} at {user.phone_number}: {message.sid}"
+            )
+
+            VerificationToken.objects.create(
+                user=user,
+                channel=VerificationToken.CHANNEL_PHONE,
+                token_hash=_hash_token(raw_verification_token),
+                expires_at=_verification_expiry(),
+            )
+
+            return message
+        
+        except Exception as exc:
+            logger.error(
+                f"Failed to send phone verification SMS to user {user.id} at {user.phone_number}: {exc}"
+            )
+            raise serializers.ValidationError(
+                {"phone_number": "Failed to send verification SMS. Please try again later."}
+            ) from exc
 
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
@@ -374,6 +437,12 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
     password_confirm = serializers.CharField(write_only=True)
     email = serializers.EmailField(required=False, allow_blank=True)
     phone_number = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    verification_options = serializers.ChoiceField(
+        choices=["email", "phone"],
+        write_only=True,
+        required=False,
+        default="email",
+    )
 
     class Meta:
         model = User
@@ -383,6 +452,7 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             "phone_number",
             "password",
             "password_confirm",
+            "verification_options",
         )
 
     def validate(self, data):
@@ -425,6 +495,16 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("A user with this phone number already exists.")
         return phone_number
 
+    def validate_verification_options(self, value):
+        if value not in ["email", "phone"]:
+            raise serializers.ValidationError("Invalid verification option.")
+        if value == "email" and not self.initial_data.get("email"):
+            raise serializers.ValidationError("Email is required for email verification.")
+        if value == "phone" and not self.initial_data.get("phone_number"):
+            raise serializers.ValidationError("Phone number is required for phone verification.")
+        return value
+    
+    
     def create(self, validated_data):
         user = User.objects.create_user(
             username=validated_data["username"],
@@ -433,11 +513,17 @@ class UserRegistrationSerializer(serializers.ModelSerializer):
             password=validated_data["password"],
         )
         UserProfile.objects.create(user=user)
-
-        if user.email:
+        verification_option = validated_data.pop("verification_options", None)
+        
+        if verification_option == "phone" :
+            logger.info(f"Issuing phone verification token for user {user.id} at {user.phone_number}")            
+            raw_token = issue_phone_verification_token(user)
+            send_phone_verification_sms(user, raw_token)
+            
+        elif verification_option == "email":
             raw_token = issue_email_verification_token(user)
             send_registration_email(user, raw_token)
-
+        
         return user
 
 
@@ -483,6 +569,47 @@ class VerifyEmailSerializer(serializers.Serializer):
 
         return user
 
+class VerifyPhoneSerializer(serializers.Serializer):
+    token = serializers.CharField(write_only=True)
+
+    default_error_messages = {
+        "invalid": "Invalid or expired verification token.",
+        "already_verified": "Phone number is already verified.",
+    }
+
+    def validate_token(self, value):
+        token_hash = _hash_token(value)
+        try:
+            token = VerificationToken.objects.select_related("user").get(
+                token_hash=token_hash,
+                channel=VerificationToken.CHANNEL_PHONE,
+            )
+        except VerificationToken.DoesNotExist:
+            self.fail("invalid")
+
+        token.attempt_count += 1
+        token.save(update_fields=["attempt_count", "updated_at"])
+
+        if token.is_used or token.is_expired:
+            self.fail("invalid")
+
+        if token.user.is_phone_verified:
+            self.fail("already_verified")
+
+        self.context["verification_token"] = token
+        return value
+
+    def save(self):
+        token = self.context["verification_token"]
+        user = token.user
+
+        user.is_phone_verified = True
+        user.save(update_fields=["is_phone_verified"])
+
+        token.used_at = timezone.now()
+        token.save(update_fields=["used_at", "updated_at"])
+
+        return user
 
 class ResendEmailVerificationSerializer(serializers.Serializer):
     email = serializers.EmailField()
