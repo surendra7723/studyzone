@@ -197,16 +197,18 @@ LOGGING = {
             'class': 'logging.StreamHandler',
             'formatter': 'simple',
         },
-    'file': {
-            'level': 'INFO',
-            'class': 'logging.FileHandler',
-            'filename': os.path.join(BASE_DIR, 'studyzone.log'),
-            'formatter': 'verbose',
+    'file': {        
+        'level': 'INFO',
+        'class': 'logging.FileHandler',
+        'filename': os.path.join(BASE_DIR, 'studyzone.log'),
+        'formatter': 'verbose',
         },
     },
     'loggers': {
-        'handlers': ['console', 'file'],
-        'level': 'INFO',
-        'propagate': True,
+        'django':{
+            'handlers': ['console', 'file'],
+            'level': 'INFO',
+            'propagate': True,
+        }
     },
 }
