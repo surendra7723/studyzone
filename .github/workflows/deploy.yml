@@ -62,30 +62,30 @@ jobs:
         run: |
           python manage.py test
 
-  deploy:
-    needs: test-and-lint # Runs only if the linting and testing steps pass perfectly
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Only deploy on commits to main
+  # deploy:
+  #   needs: test-and-lint # Runs only if the linting and testing steps pass perfectly
+  #   runs-on: ubuntu-latest
+  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Only deploy on commits to main
 
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+  #   steps:
+  #     - name: Checkout Code
+  #       uses: actions/checkout@v4
 
-      # Example option A: Automated Deploying via SSH directly to a VPS
-      - name: Deploy to Ubuntu Server via SSH
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SERVER_SSH_KEY }}
-          script: |
-            cd /var/www/my-django-app
-            git pull origin main
-            source venv/bin/activate
-            pip install -r requirements.txt
-            python manage.py migrate
-            python manage.py collectstatic --noinput
-            sudo systemctl restart gunicorn
+  #     # Example option A: Automated Deploying via SSH directly to a VPS
+  #     - name: Deploy to Ubuntu Server via SSH
+  #       uses: appleboy/ssh-action@v1.0.3
+  #       with:
+  #         host: ${{ secrets.SERVER_HOST }}
+  #         username: ${{ secrets.SERVER_USER }}
+  #         key: ${{ secrets.SERVER_SSH_KEY }}
+  #         script: |
+  #           cd /var/www/my-django-app
+  #           git pull origin main
+  #           source venv/bin/activate
+  #           pip install -r requirements.txt
+  #           python manage.py migrate
+  #           python manage.py collectstatic --noinput
+  #           sudo systemctl restart gunicorn
 
       # Example option B: Deploying directly to a Cloud Web Service Hook (uncomment if using Render)
       # - name: Trigger Render Deploy Hook
