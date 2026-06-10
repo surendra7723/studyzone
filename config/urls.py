@@ -32,6 +32,8 @@ from drf_spectacular.views import (
 from apps.user.views import AdminUserViewSet, UserViewSet
 from debug_toolbar.toolbar import debug_toolbar_urls
 
+from config import settings
+
 
 router = DefaultRouter()
 router.register(r"api/users", UserViewSet, basename="users")
@@ -54,5 +56,6 @@ urlpatterns = [
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
 ] + debug_toolbar_urls()
-
+if settings.DEBUG:
+    urlpatterns += debug_toolbar_urls()
 urlpatterns += router.urls

@@ -90,7 +90,6 @@ class UserRegistrationApiTests(APITestCase):
 	def test_register_with_phone_only(self):
 		if hasattr(mail, "outbox"):
 			del mail.outbox[:]
-
 		response = self.client.post(
 			reverse("users-list"),
 			{
@@ -98,6 +97,7 @@ class UserRegistrationApiTests(APITestCase):
 				"phone_number": "+15551234567",
 				"password": "StrongPass123!",
 				"password_confirm": "StrongPass123!",
+				"verification_options": "phone",
 			},
 			format="json",
 		)
@@ -146,10 +146,11 @@ class UserRegistrationApiTests(APITestCase):
 				"phone_number": "5551234567",
 				"password": "StrongPass123!",
 				"password_confirm": "StrongPass123!",
+				"verification_options": "phone",
 			},
 			format="json",
 		)
-
+  
 		self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
 		self.assertIn("phone_number", response.data)
 
@@ -174,7 +175,7 @@ class UserSerializerTests(APITestCase):
 	FACEBOOK_APP_SECRET="test-fb-app-secret",
 )
 class SocialAuthApiTests(APITestCase):
-	@patch("apps.user.serializers.google_id_token.verify_oauth2_token")
+	@patch("apps.user.utils.google_id_token.verify_oauth2_token")
 	def test_google_auth_creates_user_and_returns_jwt(self, mock_verify):
 		mock_verify.return_value = {
 			"sub": "google-user-123",
@@ -201,7 +202,7 @@ class SocialAuthApiTests(APITestCase):
 			).exists()
 		)
 
-	@patch("apps.user.serializers.google_id_token.verify_oauth2_token")
+	@patch("apps.user.utils.google_id_token.verify_oauth2_token")
 	def test_google_auth_requires_confirmation_on_email_collision(self, mock_verify):
 		User.objects.create_user(
 			username="existing",
@@ -244,7 +245,7 @@ class SocialAuthApiTests(APITestCase):
 			).exists()
 		)
 
-	@patch("apps.user.serializers.google_id_token.verify_oauth2_token")
+	@patch("apps.user.utils.google_id_token.verify_oauth2_token")
 	def test_confirm_social_link_rejects_inactive_user(self, mock_verify):
 		user = User.objects.create_user(
 			username="inactive-user",
@@ -278,7 +279,7 @@ class SocialAuthApiTests(APITestCase):
 		self.assertEqual(confirm_response.status_code, status.HTTP_400_BAD_REQUEST)
 		self.assertIn("detail", confirm_response.data)
 
-	@patch("apps.user.serializers.google_id_token.verify_oauth2_token")
+	@patch("apps.user.utils.google_id_token.verify_oauth2_token")
 	def test_google_auth_collision_respects_confirmation_cooldown(self, mock_verify):
 		User.objects.create_user(
 			username="cooldown-user",
@@ -310,7 +311,7 @@ class SocialAuthApiTests(APITestCase):
 			1,
 		)
 
-	@patch("apps.user.serializers.google_id_token.verify_oauth2_token")
+	@patch("apps.user.utils.google_id_token.verify_oauth2_token")
 	def test_link_and_unlink_social_account(self, mock_verify):
 		user = User.objects.create_user(
 			username="regular",
@@ -342,7 +343,7 @@ class SocialAuthApiTests(APITestCase):
 		)
 		self.assertEqual(unlink_response.status_code, status.HTTP_204_NO_CONTENT)
 
-	@patch("apps.user.serializers.requests.get")
+	@patch("apps.user.utils.requests.get")
 	def test_facebook_auth_returns_jwt(self, mock_get):
 		# First call returns profile, second call returns debug_token payload
 		mock_profile = Mock()
