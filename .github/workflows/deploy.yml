@@ -50,9 +50,15 @@ jobs:
       - name: Run Django Tests
         env:
           # Match these with the Postgres service above or use SQLite for simpler testing
-          DATABASE_URL: postgres://django_user:django_secure_password@localhost:5432/django_test_db
-          SECRET_KEY: "django-insecure-ci-testing-fallback-key-12345"
+          DB_NAME: "django_test_db"
+          DB_USER: "django_user"
+          DB_PASSWORD: "django_secure_password"
+          DB_HOST: "127.0.0.1"
+          DB_PORT: "5432"
+          SECRET_KEY: ${ secrets.DJANGO_SECRET_KEY }
           DEBUG: "False"
+
+
         run: |
           python manage.py test
 
