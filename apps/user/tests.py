@@ -35,6 +35,38 @@ class UserRegistrationApiTests(APITestCase):
 			VerificationToken.objects.filter(user=User.objects.first(), channel="email").count(),
 			1,
 		)
+	
+	def test_register_with_phone_only(self):
+		response = self.client.post(
+			reverse("users-list"),
+			{
+				"username": "bob",
+				"phone_number": "+15555555555",
+				"password": "StrongPass123!",
+				"password_confirm": "StrongPass123!",
+				"verification_options": "phone",
+			},
+			format="json",
+		)
+		self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+		self.assertEqual(User.objects.count(),1)
+		self.assertEqual(User.objects.first().phone,'+15555555555')
+		token = VerificationToken.objects.filter(user__username="bob", channel="phone").first()
+		verify_response = self.client.post(
+			reverse("users-verify-phone"),
+			{"token": getattr(token, "_raw_token", None) or ""},
+		)
+		if verify_response.status_code == status.HTTP_400_BAD_REQUEST:
+			# fallback: extract token from outbox body if serializer didn't expose it
+			body = mail.outbox[-1].body
+			raw_token = body.split("token=")[-1].strip()
+			verify_response = self.client.post(
+				reverse("users-verify-phone"),
+				{"token": raw_token},
+			)
+		self.assertEqual(verify_response.status_code, status.HTTP_200_OK)
+		user = User.objects.get(username="bob")
+		self.assertTrue(user.is_phone_verified)
 
 	def test_verify_email_success(self):
 		response = self.client.post(
