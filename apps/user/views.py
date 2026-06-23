@@ -1,4 +1,5 @@
 from django.contrib.auth import get_user_model
+from requests import request
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
@@ -16,6 +17,7 @@ from .serializers import (
 	UserRegistrationSerializer,
 	UserSerializer,
 	VerifyEmailSerializer,
+	VerifyPhoneSerializer,
 )
 
 User = get_user_model()
@@ -40,6 +42,7 @@ class UserViewSet(viewsets.ViewSet):
 		return [IsAuthenticated()]
 
 	def create(self, request):
+     
 		"""Create a new user account. Either email or phone_number is required."""
 		serializer = UserRegistrationSerializer(data=request.data)
 		serializer.is_valid(raise_exception=True)
@@ -52,7 +55,7 @@ class UserViewSet(viewsets.ViewSet):
 		return Response(serializer.data)
 
 	@action(detail=False, methods=["get", "post"], permission_classes=[AllowAny], url_path="verify-email")
-	def verify_email(self, request):
+	def verify_email(self, request):		
 		token = request.data.get("token") if request.method == "POST" else request.query_params.get("token")
 		serializer = VerifyEmailSerializer(data={"token": token})
 		serializer.is_valid(raise_exception=True)
@@ -66,6 +69,20 @@ class UserViewSet(viewsets.ViewSet):
 		)
 
 	@action(detail=False,methods=["get", "post"], permission_classes=[AllowAny], url_path="verify-phone")
+	def verify_phone(self, request):
+
+		token = request.data.get("token") if request.method == "POST" else request.query_params.get("token")
+		ser = VerifyPhoneSerializer(data={"token": token})
+		ser.is_valid(raise_exception=True)
+		user = ser.save()
+		return Response(
+			{
+				"detail": "Phone verified successfully.",
+				"user": UserSerializer(user).data,
+			},
+			status=status.HTTP_200_OK,
+		)
+	
 	@action(
 		detail=False,
 		methods=["post"],
