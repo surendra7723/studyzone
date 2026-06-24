@@ -151,11 +151,15 @@ SOCIAL_LINK_TOKEN_TTL_MINUTES = int(os.getenv("SOCIAL_LINK_TOKEN_TTL_MINUTES", "
 SOCIAL_LINK_RESEND_COOLDOWN_SECONDS = int(
     os.getenv("SOCIAL_LINK_RESEND_COOLDOWN_SECONDS", "60")
 )
+#Toggle (env) or "db" for emailbackend and phonebackend
+
+EMAIL_CONFIG_SOURCE = os.getenv("EMAIL_CONFIG_SOURCE", "env")
+TWILIO_CONFIG_SOURCE = os.getenv("TWILIO_CONFIG_SOURCE", "env")
 
 # Email configuration for local Mailpit verification.
-EMAIL_BACKEND = os.getenv(
-    "EMAIL_BACKEND", "django.core.mail.backends.smtp.EmailBackend"
-)
+EMAIL_BACKEND = "core.emailbackend.DynamicSMTPBackend"
+
+
 EMAIL_HOST = os.getenv("EMAIL_HOST", "localhost")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", "1025"))
 EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
