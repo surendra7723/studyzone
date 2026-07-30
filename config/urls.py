@@ -29,6 +29,7 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
+from apps.server.views.base import ServerBaseView
 from apps.user.views import AdminUserViewSet, UserViewSet
 from debug_toolbar.toolbar import debug_toolbar_urls
 
@@ -38,6 +39,7 @@ from config import settings
 router = DefaultRouter()
 router.register(r"api/users", UserViewSet, basename="users")
 router.register(r"api/admin/users", AdminUserViewSet, basename="admin-users")
+# router.register(r"api/server", ServerBaseView, basename="server")
 
 urlpatterns = [
     path("admin/", admin.site.urls),

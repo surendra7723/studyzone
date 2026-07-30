@@ -1,7 +1,7 @@
 import os
 from django.conf import settings
 from django.core.cache import cache
-from models.emailphoneserver import EmailServer, PhoneServer
+from core.models.emailphoneserver import EmailServer, PhoneServer
 
 CACHE_TTL = 300  # 5 minutes – adjust as needed
 
