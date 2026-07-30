@@ -29,7 +29,6 @@ class PomodoroSessionManager(models.Manager.from_queryset(PomodoroSessionQuerySe
                 session_count=Count("id"),
             )
         )
-
     def _get_truncated_summary(self, user, trunc_func):
         """Generic helper for truncated summaries"""
         return (
