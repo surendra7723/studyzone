@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "apps.tasks.apps.TasksConfig",
     "apps.pomodoro.apps.PomodoroConfig",
     "debug_toolbar",
+    'django_celery_beat'
 ]
 
 # Make django-extensions use IPython by default in shell_plus.
@@ -121,6 +122,10 @@ SIMPLE_JWT = {
     "BLACKLIST_AFTER_ROTATION": False,
     "UPDATE_LAST_LOGIN": True,
 }
+
+POMODORO_SESSION_ORPHAN_TTL_HOURS = int(
+    os.getenv("POMODORO_SESSION_ORPHAN_TTL_HOURS", "24")
+)
 
 SPECTACULAR_SETTINGS = {
     "TITLE": "Studyzone API",
