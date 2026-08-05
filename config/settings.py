@@ -51,6 +51,7 @@ INSTALLED_APPS = [
     "django_extensions",
     "core.apps.CoreConfig",
     "apps.user.apps.UserConfig",
+    "apps.social.apps.SocialConfig",
     "config.apps.ConfigConfig",
     "apps.tasks.apps.TasksConfig",
     "apps.pomodoro.apps.PomodoroConfig",
@@ -93,6 +94,15 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
+
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.getenv("CHANNEL_REDIS_URL", os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"))],
+        },
+    }
+}
 
 # REST Framework Configuration
 REST_FRAMEWORK = {
@@ -157,6 +167,12 @@ SOCIAL_LINK_TOKEN_TTL_MINUTES = int(os.getenv("SOCIAL_LINK_TOKEN_TTL_MINUTES", "
 SOCIAL_LINK_RESEND_COOLDOWN_SECONDS = int(
     os.getenv("SOCIAL_LINK_RESEND_COOLDOWN_SECONDS", "60")
 )
+
+SOCIAL_PRESENCE_REDIS_URL = os.getenv(
+    "SOCIAL_PRESENCE_REDIS_URL",
+    os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
+)
+SOCIAL_PRESENCE_TTL_SECONDS = int(os.getenv("SOCIAL_PRESENCE_TTL_SECONDS", "90"))
 #Toggle (env) or "db" for emailbackend and phonebackend
 
 EMAIL_CONFIG_SOURCE = os.getenv("EMAIL_CONFIG_SOURCE", "env")
