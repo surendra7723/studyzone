@@ -12,7 +12,7 @@ Django REST API for a collaborative study platform with real-time friends/presen
 - JWT authentication with token refresh
 - API docs (Swagger + ReDoc)
 
-**Tech**: Django 6.0, DRF, PostgreSQL, Redis, Celery, Channels, SimpleJWT
+**Tech**: Django 5.2.17, DRF 3.18.0, PostgreSQL, Redis 8.1.0, Celery 5.6.3, Channels 4.3.2, SimpleJWT 5.5.1
 
 ## Quick Start
 
@@ -166,11 +166,8 @@ uv run python manage.py migrate
 ```
 studyzone/
 ├── config/                          # Django project settings
-│   ├── settings/
-│   │   ├── base.py                 # Base settings
-│   │   ├── dev.py                  # Development settings
-│   │   └── prod.py                 # Production settings
-│   ├── urls.py                     # Root URL configuration
+│   ├── settings.py                  # Main settings
+│   ├── urls.py                      # Root URL configuration
 │   └── wsgi.py / asgi.py
 ├── apps/                            # Django apps
 │   ├── user/                        # User management
