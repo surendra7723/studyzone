@@ -9,7 +9,7 @@ on:
 jobs:
   test-and-lint:
     runs-on: ubuntu-latest
-    
+
     services:
       postgres:
         image: postgres:15
@@ -25,17 +25,13 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v4
         with:
           python-version: '3.12'
-          cache: 'pip' # Speeds up subsequent runs by caching package layers
 
       - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install flake8
-          pip install -r requirements.txt
+        run: uv pip install -r requirements/dev.txt
 
       - name: Code Quality (Linting with Flake8)
         env:
@@ -43,9 +39,9 @@ jobs:
           SECRET_KEY: "django-insecure-ci-testing-fallback-key-12345"
         run: |
           # stop the build if there are Python syntax errors or undefined names
-          flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
+          uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
           # exit-zero treats all errors as warnings.
-          flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          uv run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
 
       - name: Run Django Tests
         env:
@@ -57,10 +53,8 @@ jobs:
           DB_PORT: "5432"
           SECRET_KEY: ${ secrets.DJANGO_SECRET_KEY }
           DEBUG: "False"
-
-
         run: |
-          python manage.py test
+          uv run python manage.py test
 
   # deploy:
   #   needs: test-and-lint # Runs only if the linting and testing steps pass perfectly
@@ -68,8 +62,13 @@ jobs:
   #   if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Only deploy on commits to main
 
   #   steps:
-  #     - name: Checkout Code
-  #       uses: actions/checkout@v4
+  #     - name: Set up uv
+  #       uses: astral-sh/setup-uv@v4
+  #       with:
+  #         python-version: '3.12'
+
+  #     - name: Install Dependencies
+  #       run: uv pip install -r requirements/dev.txt
 
   #     # Example option A: Automated Deploying via SSH directly to a VPS
   #     - name: Deploy to Ubuntu Server via SSH
@@ -81,10 +80,8 @@ jobs:
   #         script: |
   #           cd /var/www/my-django-app
   #           git pull origin main
-  #           source venv/bin/activate
-  #           pip install -r requirements.txt
-  #           python manage.py migrate
-  #           python manage.py collectstatic --noinput
+  #           uv run python manage.py migrate
+  #           uv run python manage.py collectstatic --noinput
   #           sudo systemctl restart gunicorn
 
       # Example option B: Deploying directly to a Cloud Web Service Hook (uncomment if using Render)
