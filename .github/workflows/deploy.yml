@@ -1,4 +1,4 @@
-name: Django CI/CD Pipeline
+name: Django CI
 
 on:
   push:
@@ -9,7 +9,7 @@ on:
 jobs:
   test-and-lint:
     runs-on: ubuntu-latest
-
+ 
     services:
       postgres:
         image: postgres:15
@@ -29,6 +29,9 @@ jobs:
         uses: astral-sh/setup-uv@v4
         with:
           python-version: '3.12'
+
+      - name: Create venv
+        run: uv venv
 
       - name: Install Dependencies
         run: uv pip install -r requirements/dev.txt
@@ -66,6 +69,9 @@ jobs:
   #       uses: astral-sh/setup-uv@v4
   #       with:
   #         python-version: '3.12'
+
+  #     - name: Create venv
+  #       run: uv venv
 
   #     - name: Install Dependencies
   #       run: uv pip install -r requirements/dev.txt
