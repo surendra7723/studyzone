@@ -1,5 +1,7 @@
 # StudyZone Backend
 
+Engineered for low-latency real-time presence tracking via WebSockets (Django Channels) and asynchronous background scheduling with Celery/Redis.
+
 Django REST API for a collaborative study platform with real-time friends/presence, pomodoro sessions, task management, and social auth.
 
 ## Features
@@ -13,6 +15,8 @@ Django REST API for a collaborative study platform with real-time friends/presen
 - API docs (Swagger + ReDoc)
 
 **Tech**: Django 5.2.17, DRF 3.18.0, PostgreSQL, Redis 8.1.0, Celery 5.6.3, Channels 4.3.2, SimpleJWT 5.5.1
+
+**Tests**: `uv run python manage.py test`
 
 ## Quick Start
 
@@ -33,50 +37,50 @@ cd studyzone
 ```
 
 2. Create virtual environment
-   ```bash
-   uv venv
-   ```
+    ```bash
+    uv venv
+    ```
 
 3. Install dependencies
-   ```bash
-   uv pip install -r requirements.txt
-   ```
+    ```bash
+    uv pip install -r requirements.txt
+    ```
 
 4. Set up environment variables
-   ```bash
-   cp .env.example .env
-   # Edit .env with your configuration
-   ```
+    ```bash
+    cp .env.example .env
+    # Edit .env with your configuration
+    ```
 
 5. Run database migrations
-   ```bash
-   uv run python manage.py migrate
-   ```
+    ```bash
+    uv run python manage.py migrate
+    ```
 
 6. Create a superuser
-   ```bash
-   uv run python manage.py createsuperuser
-   ```
+    ```bash
+    uv run python manage.py createsuperuser
+    ```
 
 7. Start Redis (required for Celery and Channels)
-   ```bash
-   redis-server
-   ```
+    ```bash
+    redis-server
+    ```
 
 8. Start Celery worker (in another terminal)
-   ```bash
-   celery -A config worker -l info
-   ```
+    ```bash
+    celery -A config worker -l info
+    ```
 
 9. Start Celery beat (in another terminal)
-   ```bash
-   celery -A config beat -l info
-   ```
+    ```bash
+    celery -A config beat -l info
+    ```
 
 10. Start the development server (in another terminal)
-    ```bash
-    uv run python manage.py runserver
-    ```
+     ```bash
+     uv run python manage.py runserver
+     ```
 
 ## Quick Install (one-liner)
 
@@ -123,25 +127,37 @@ Authorization: Bearer <access-token>
 
 ### User & Auth Endpoints
 ```
-POST   /users/                           # Register
-GET    /users/                           # Get current user
-POST   /users/verify-email/              # Verify email with token
-POST   /users/verify-phone/              # Verify phone with token
-POST   /users/resend-email-verification/ # Resend verification email
-POST   /users/auth/google/               # Google OAuth sign-in
-POST   /users/auth/facebook/             # Facebook OAuth sign-in
-POST   /users/confirm-social-link/       # Confirm social account link
-GET    /users/linked-accounts/           # List linked social accounts
-DELETE /users/linked-accounts/           # Unlink social account
+POST   /api/users/                           # Register
+GET    /api/users/                           # Get current user
+POST   /api/users/verify-email/              # Verify email with token
+POST   /api/users/verify-phone/              # Verify phone with token
+POST   /api/users/resend-email-verification/ # Resend verification email
+POST   /api/users/auth/google/               # Google OAuth sign-in
+POST   /api/users/auth/facebook/             # Facebook OAuth sign-in
+POST   /api/users/confirm-social-link/       # Confirm social account link
+GET    /api/users/linked-accounts/           # List linked social accounts
+POST   /api/users/linked-accounts/           # Link social account
+DELETE /api/users/linked-accounts/<provider>/ # Unlink social account
 ```
 
-### Auth & Users
+### Social Endpoints
 ```
-POST   /api/users/                    # Register
-GET    /api/users/                    # Get current user
-POST   /api/users/verify-email/       # Verify email
-POST   /api/auth/token/               # Get JWT tokens
-POST   /api/auth/token/refresh/       # Refresh JWT token
+GET    /api/social/friends/                               # List friends
+GET    /api/social/presence/                              # Presence snapshot
+POST   /api/social/friend-requests/                       # Send friend request
+GET    /api/social/friend-requests/                       # List all friend requests
+GET    /api/social/friend-requests/incoming/              # Incoming requests
+GET    /api/social/friend-requests/outgoing/              # Outgoing requests
+POST   /api/social/friend-requests/<pk>/accept/           # Accept request
+POST   /api/social/friend-requests/<pk>/decline/          # Decline request
+POST   /api/social/friend-requests/<pk>/cancel/           # Cancel request
+```
+
+### JWT Endpoints
+```
+POST   /api/auth/token/           # Get JWT tokens
+POST   /api/auth/token/refresh/   # Refresh JWT token
+POST   /api/auth/token/verify/    # Verify JWT token
 ```
 
 ## Development
