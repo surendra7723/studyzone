@@ -40,11 +40,21 @@ jobs:
         env:
           # Match these with the Postgres service above or use SQLite for simpler testing
           SECRET_KEY: "django-insecure-ci-testing-fallback-key-12345"
-        run: |
-          # stop the build if there are Python syntax errors or undefined names
-          uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
-          # exit-zero treats all errors as warnings.
-          uv run flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+          run: |
+            uv run flake8 . \
+              --exclude=.venv,venv \
+              --count \
+              --select=E9,F63,F7,F82 \
+              --show-source \
+              --statistics
+
+            uv run flake8 . \
+              --exclude=.venv,venv \
+              --count \
+              --exit-zero \
+              --max-complexity=10 \
+              --max-line-length=127 \
+              --statistics
 
       - name: Run Django Tests
         env:
