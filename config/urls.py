@@ -59,7 +59,11 @@ urlpatterns = [
     path("api/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
     path("api/dictionary/", include("dictionary_app.urls")),
     path("api/social/", include("apps.social.urls")),
+    path("api/ambience/", include("apps.ambience.urls")),
 ] + debug_toolbar_urls()
 if settings.DEBUG:
+    from django.conf.urls.static import static
+
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
     urlpatterns += debug_toolbar_urls()
 urlpatterns += router.urls

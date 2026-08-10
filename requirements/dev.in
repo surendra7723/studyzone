@@ -1,0 +1,10 @@
+-c base.txt            # Constrains dev dependencies to match base versions
+-r base.in             # Includes base packages
+
+django-debug-toolbar
+django-extensions
+black
+flake8
+ipdb
+factory_boy
+pipdeptree

@@ -18,6 +18,8 @@ Django REST API for a collaborative study platform with real-time friends/presen
 
 ### Prerequisites
 - Python 3.12+
+- uv (https://docs.astral.sh/uv/)
+- `.python-version` file (pins Python 3.12 for `uv` and `pyenv`)
 - PostgreSQL 13+
 - Redis 6+
 - Mailpit (for local email testing, optional)
@@ -30,58 +32,65 @@ git clone <repo-url>
 cd studyzone
 ```
 
-2. Create and activate virtual environment
-```bash
-python3.12 -m venv .venv
-source .venv/bin/activate
-```
+2. Create virtual environment
+   ```bash
+   uv venv
+   ```
 
 3. Install dependencies
-```bash
-pip install -r requirements.txt
-```
+   ```bash
+   uv pip install -r requirements.txt
+   ```
 
 4. Set up environment variables
-```bash
-cp .env.example .env
-# Edit .env with your configuration
-```
+   ```bash
+   cp .env.example .env
+   # Edit .env with your configuration
+   ```
 
 5. Run database migrations
-```bash
-python manage.py migrate
-```
+   ```bash
+   uv run python manage.py migrate
+   ```
 
 6. Create a superuser
-```bash
-python manage.py createsuperuser
-```
+   ```bash
+   uv run python manage.py createsuperuser
+   ```
 
 7. Start Redis (required for Celery and Channels)
-```bash
-redis-server
-```
+   ```bash
+   redis-server
+   ```
 
 8. Start Celery worker (in another terminal)
-```bash
-celSetup
+   ```bash
+   celery -A config worker -l info
+   ```
 
-### Prerequisites
-- Python 3.12+, PostgreSQL 13+, Redis 6+
+9. Start Celery beat (in another terminal)
+   ```bash
+   celery -A config beat -l info
+   ```
 
-### Installation
+10. Start the development server (in another terminal)
+    ```bash
+    uv run python manage.py runserver
+    ```
+
+## Quick Install (one-liner)
 
 ```bash
 # Clone and setup
 git clone <repo-url> && cd studyzone
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+uv venv
+uv pip install -r requirements.txt
 
 # Database and migrations
-python manage.py migrate
+uv run python manage.py migrate
 
 # Create superuser
-python manage.py createsuperuser
+uv run python manage.py createsuperuser
 
 # Terminal 1: Redis
 redis-server
@@ -93,19 +102,11 @@ celery -A config worker -l info
 celery -A config beat -l info
 
 # Terminal 4: Dev server
-python manage.py runserver
+uv run python manage.py runserver
 ```
 
 API: `http://localhost:8000`  
-Docs: `http://localhost:8000/api/docs/swaggerfig (queues, timeouts)
-│   └── schedules.py              # Celery beat schedule
-├── dictionary_app/               # Dictionary/vocabulary app
-├── docs/                          # API documentation
-│   └── social_auth.md            # Social auth frontend contract
-├── requirements.txt              # Python dependencies
-├── manage.py                      # Django management CLI
-└── README.md                      # This file
-```
+Docs: `http://localhost:8000/api/docs/swagger`
 
 ## API Overview
 
@@ -131,7 +132,8 @@ POST   /users/auth/google/               # Google OAuth sign-in
 POST   /users/auth/facebook/             # Facebook OAuth sign-in
 POST   /users/confirm-social-link/       # Confirm social account link
 GET    /users/linked-accounts/           # List linked social accounts
-DELKey Endpoints
+DELETE /users/linked-accounts/           # Unlink social account
+```
 
 ### Auth & Users
 ```
@@ -139,19 +141,54 @@ POST   /api/users/                    # Register
 GET    /api/users/                    # Get current user
 POST   /api/users/verify-email/       # Verify email
 POST   /api/auth/token/               # Get JWT tokens
-POSDevelopment
+POST   /api/auth/token/refresh/       # Refresh JWT token
+```
+
+## Development
 
 ```bash
 # Run tests
-python manage.py test
+uv run python manage.py test
 
 # Run specific app tests
-python manage.py test apps.social --keepdb
+uv run python manage.py test apps.social --keepdb
 
 # Format code
 black .
 
 # Database operations
-python manage.py makemigrations
-python manage.py migrate
+uv run python manage.py makemigrations
+uv run python manage.py migrate
+```
+
+## Project Structure
+
+```
+studyzone/
+├── config/                          # Django project settings
+│   ├── settings/
+│   │   ├── base.py                 # Base settings
+│   │   ├── dev.py                  # Development settings
+│   │   └── prod.py                 # Production settings
+│   ├── urls.py                     # Root URL configuration
+│   └── wsgi.py / asgi.py
+├── apps/                            # Django apps
+│   ├── user/                        # User management
+│   ├── social/                      # Social authentication
+│   ├── tasks/                       # Task management
+│   ├── friends/                     # Friend relationships
+│   ├── presence/                    # Real-time presence
+│   ├── pomodoro/                    # Pomodoro sessions
+│   ├── goals/                       # Goal management
+│   ├── notifications/               # Notifications
+│   ├── dictionary_app/              # Dictionary/vocabulary
+│   ├── ambience/                    # Ambience audio tracks
+│   └── core/                        # Core utilities
+├── requirements/
+│   ├── base.txt                     # Base dependencies
+│   ├── dev.txt                      # Development dependencies
+│   └── prod.txt                     # Production dependencies
+├── media/                           # User-uploaded files
+├── manage.py                        # Django management CLI
+└── README.md                        # This file
 ```

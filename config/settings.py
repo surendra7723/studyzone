@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     "config.apps.ConfigConfig",
     "apps.tasks.apps.TasksConfig",
     "apps.pomodoro.apps.PomodoroConfig",
+    "apps.ambience.apps.AmbienceConfig",
     "debug_toolbar",
     'django_celery_beat',
     "dictionary_app",
@@ -108,6 +109,7 @@ CHANNEL_LAYERS = {
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
@@ -197,3 +199,7 @@ MOCK_TWILIO = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "static/"
+
+# Media files
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"

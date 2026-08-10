@@ -1,6 +1,4 @@
-
-
-from psycopg2 import OperationalError
+from django.db.utils import OperationalError
 
 
 class ServerCheckerMixin:
