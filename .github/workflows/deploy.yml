@@ -67,7 +67,7 @@ jobs:
           SECRET_KEY: ${{ secrets.DJANGO_SECRET_KEY }}
           DEBUG: "False"
         run: |
-          uv run python manage.py test
+          uv run python manage.py test --keepdb
 
   # deploy:
   #   needs: test-and-lint # Runs only if the linting and testing steps pass perfectly

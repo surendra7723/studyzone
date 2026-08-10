@@ -14,6 +14,7 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", "surendra"),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
+        "CONN_MAX_AGE": 0,
     }
 }
 

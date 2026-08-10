@@ -7,7 +7,6 @@ class ServerCheckerMixin:
         """Check if the database connection is healthy."""
         from django.db import connections
         try:
-            connections['default'].cursor()
             with connections['default'].cursor() as cursor:
                 cursor.execute("SELECT 1")
                 result = cursor.fetchone()

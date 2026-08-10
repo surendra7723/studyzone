@@ -1,6 +1,6 @@
 from urllib.parse import parse_qs
 
-from asgiref.sync import sync_to_async
+from channels.db import database_sync_to_async
 from django.contrib.auth.models import AnonymousUser
 from django.contrib.auth import get_user_model
 from django.db import close_old_connections
@@ -10,7 +10,7 @@ from rest_framework_simplejwt.settings import api_settings
 User = get_user_model()
 
 
-@sync_to_async
+@database_sync_to_async
 def _get_user(user_id):
     try:
         return User.objects.get(pk=user_id, is_active=True)
