@@ -36,6 +36,7 @@ class Command(StartAppCommand):
             return
 
         dest_dir.mkdir(parents=True, exist_ok=True)
+        target_dir.mkdir(parents=True, exist_ok=True)
 
         options["template"] = str(template_path)
         options["extension"] = ["py-tpl"]

@@ -14,6 +14,7 @@ DATABASES = {
         "PASSWORD": os.getenv("DB_PASSWORD", "surendra"),
         "HOST": os.getenv("DB_HOST", "localhost"),
         "PORT": os.getenv("DB_PORT", "5432"),
+        "CONN_MAX_AGE": 0,
     }
 }
 
@@ -51,9 +52,11 @@ INSTALLED_APPS = [
     "django_extensions",
     "core.apps.CoreConfig",
     "apps.user.apps.UserConfig",
+    "apps.social.apps.SocialConfig",
     "config.apps.ConfigConfig",
     "apps.tasks.apps.TasksConfig",
     "apps.pomodoro.apps.PomodoroConfig",
+    "apps.ambience.apps.AmbienceConfig",
     "debug_toolbar",
     'django_celery_beat',
     "dictionary_app",
@@ -94,10 +97,20 @@ TEMPLATES = [
 WSGI_APPLICATION = "config.wsgi.application"
 ASGI_APPLICATION = "config.asgi.application"
 
+CHANNEL_LAYERS = {
+    "default": {
+        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "CONFIG": {
+            "hosts": [os.getenv("CHANNEL_REDIS_URL", os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"))],
+        },
+    }
+}
+
 # REST Framework Configuration
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "rest_framework.authentication.SessionAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.IsAuthenticated",
@@ -157,6 +170,12 @@ SOCIAL_LINK_TOKEN_TTL_MINUTES = int(os.getenv("SOCIAL_LINK_TOKEN_TTL_MINUTES", "
 SOCIAL_LINK_RESEND_COOLDOWN_SECONDS = int(
     os.getenv("SOCIAL_LINK_RESEND_COOLDOWN_SECONDS", "60")
 )
+
+SOCIAL_PRESENCE_REDIS_URL = os.getenv(
+    "SOCIAL_PRESENCE_REDIS_URL",
+    os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
+)
+SOCIAL_PRESENCE_TTL_SECONDS = int(os.getenv("SOCIAL_PRESENCE_TTL_SECONDS", "90"))
 #Toggle (env) or "db" for emailbackend and phonebackend
 
 EMAIL_CONFIG_SOURCE = os.getenv("EMAIL_CONFIG_SOURCE", "env")
@@ -181,3 +200,42 @@ MOCK_TWILIO = True
 
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = "static/"
+
+# Media files
+MEDIA_URL = "media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
+LOGGING = {
+    "version": 1,
+    "disable_existing_loggers": False,
+    "formatters": {
+        "verbose": {
+            "format": "{levelname} {asctime} {module} {thread:d}{message}",
+            "style": "{",
+        },
+        "simple": {
+            "format": "{levelname} {asctime} [{module}] {message}",
+            "style": "{",
+        },
+    },
+    "handlers": {
+        "console": {
+            "level": "INFO",
+            "class": "logging.StreamHandler",
+            "formatter": "simple",
+        },
+        "file": {
+            "level": "INFO",
+            "class": "logging.FileHandler",
+            "filename": os.path.join(BASE_DIR, "studyzone.log"),
+            "formatter": "verbose",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "file"],
+            "level": "INFO",
+            "propagate": True,
+        },
+    },
+}
