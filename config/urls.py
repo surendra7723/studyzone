@@ -30,7 +30,7 @@ from drf_spectacular.views import (
 )
 
 from apps.server.views.base import ServerBaseView
-from apps.user.views import AdminUserViewSet, UserViewSet
+from apps.user.views import AdminUserViewSet, UserViewSet, UserProfileViewSet
 from debug_toolbar.toolbar import debug_toolbar_urls
 
 from config import settings
@@ -39,6 +39,7 @@ from config import settings
 router = DefaultRouter()
 router.register(r"api/users", UserViewSet, basename="users")
 router.register(r"api/admin/users", AdminUserViewSet, basename="admin-users")
+router.register(r"api/user-profiles", UserProfileViewSet, basename="user-profiles")
 # router.register(r"api/server", ServerBaseView, basename="server")
 
 urlpatterns = [
@@ -58,6 +59,7 @@ urlpatterns = [
     path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
     path("api/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
     path("api/dictionary/", include("dictionary_app.urls")),
+    path("api/tasks/", include("apps.tasks.urls")),
     path("api/social/", include("apps.social.urls")),
     path("api/ambience/", include("apps.ambience.urls")),
 ] + debug_toolbar_urls()

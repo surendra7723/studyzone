@@ -1,3 +1,7 @@
-from .base import TasksBaseView
+from .base import TaskViewSet, CategoryViewSet
 
-__all__ = ["TasksBaseView"]
+__all__ = [
+    "TaskViewSet",
+    "CategoryViewSet",
+]
+

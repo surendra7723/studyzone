@@ -1,17 +1,22 @@
-from django.contrib.auth import get_user_model
+"""
+Social features views: Friend requests, friendships, and presence tracking.
+"""
 from django.db import transaction
-from django.shortcuts import get_object_or_404
-from rest_framework import permissions, status
+from django.db.models import Q
+from django_filters.rest_framework import DjangoFilterBackend
+from drf_spectacular.utils import extend_schema, extend_schema_view
+from rest_framework import filters, status, viewsets
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
-from rest_framework.views import APIView
 
+from core.permissions import IsFriendOrSelf
 from .models import FriendRequest, FriendRequestStatus, Friendship, UserPresenceState
 from .serializers import (
     FriendRequestCreateSerializer,
     FriendRequestSerializer,
     FriendshipSerializer,
     PresenceSnapshotSerializer,
-    SocialUserSummarySerializer,
 )
 from .services import (
     accept_friend_request,
@@ -19,97 +24,165 @@ from .services import (
     cancel_friend_request,
     decline_friend_request,
     get_friend_snapshot_queryset,
-    get_friend_user_ids,
 )
 
-User = get_user_model()
 
+@extend_schema_view(
+    list=extend_schema(summary="List all friend requests", tags=["Social - Friends"]),
+    create=extend_schema(summary="Send friend request", tags=["Social - Friends"]),
+)
+class FriendRequestViewSet(viewsets.ModelViewSet):
+    """Manage friend requests with full CRUD operations."""
 
-class FriendRequestListCreateView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+    serializer_class = FriendRequestSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
+    filterset_fields = ['status']
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
 
-    def get(self, request):
-        requests = FriendRequest.objects.select_related("sender", "receiver").filter(
-            sender=request.user
-        ) | FriendRequest.objects.select_related("sender", "receiver").filter(receiver=request.user)
-        return Response(FriendRequestSerializer(requests.distinct(), many=True, context={"request": request}).data)
+    def get_queryset(self):
+        """Get all friend requests for the current user (sent and received)."""
+        user = self.request.user
+        return FriendRequest.objects.select_related(
+            "sender", "receiver"
+        ).filter(
+            Q(sender=user) | Q(receiver=user)
+        ).distinct()
 
-    def post(self, request):
-        serializer = FriendRequestCreateSerializer(data=request.data, context={"request": request})
-        serializer.is_valid(raise_exception=True)
+    def get_serializer_class(self):
+        """Use CreateSerializer for create actions."""
+        if self.action == 'create':
+            return FriendRequestCreateSerializer
+        return FriendRequestSerializer
+
+    def perform_create(self, serializer):
+        """Create friend request and broadcast event."""
         friend_request = serializer.save()
         broadcast_friend_request_event(friend_request, "friend.request.created")
-        return Response(FriendRequestSerializer(friend_request, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
-
-class IncomingFriendRequestListView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        requests = FriendRequest.objects.select_related("sender", "receiver").filter(
+    @extend_schema(summary="Get incoming friend requests", tags=["Social - Friends"])
+    @action(detail=False, methods=['get'])
+    def incoming(self, request):
+        """Get incoming friend requests."""
+        requests = FriendRequest.objects.select_related(
+            "sender", "receiver"
+        ).filter(
             receiver=request.user,
             status=FriendRequestStatus.PENDING,
         )
-        return Response(FriendRequestSerializer(requests, many=True, context={"request": request}).data)
+        serializer = self.get_serializer(requests, many=True)
+        return Response(serializer.data)
 
-
-class OutgoingFriendRequestListView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request):
-        requests = FriendRequest.objects.select_related("sender", "receiver").filter(
+    @extend_schema(summary="Get outgoing friend requests", tags=["Social - Friends"])
+    @action(detail=False, methods=['get'])
+    def outgoing(self, request):
+        """Get outgoing friend requests."""
+        requests = FriendRequest.objects.select_related(
+            "sender", "receiver"
+        ).filter(
             sender=request.user,
             status=FriendRequestStatus.PENDING,
         )
-        return Response(FriendRequestSerializer(requests, many=True, context={"request": request}).data)
+        serializer = self.get_serializer(requests, many=True)
+        return Response(serializer.data)
 
-
-class FriendRequestAcceptView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request, pk):
-        friend_request = get_object_or_404(FriendRequest, pk=pk, receiver=request.user)
+    @extend_schema(summary="Accept friend request", tags=["Social - Friends"])
+    @action(detail=True, methods=['post'])
+    def accept(self, request, pk=None):
+        """Accept a friend request."""
+        friend_request = self.get_object()
+        if friend_request.receiver != request.user:
+            return Response(
+                {"detail": "You can only accept requests sent to you."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         if not friend_request.is_pending:
-            return Response({"detail": "Friend request is not pending."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Friend request is not pending."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         with transaction.atomic():
             friendship = accept_friend_request(friend_request)
-        return Response(FriendshipSerializer(friendship, context={"request": request}).data)
+        return Response(
+            FriendshipSerializer(friendship, context={"request": request}).data
+        )
 
-
-class FriendRequestDeclineView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request, pk):
-        friend_request = get_object_or_404(FriendRequest, pk=pk, receiver=request.user)
+    @extend_schema(summary="Decline friend request", tags=["Social - Friends"])
+    @action(detail=True, methods=['post'])
+    def decline(self, request, pk=None):
+        """Decline a friend request."""
+        friend_request = self.get_object()
+        if friend_request.receiver != request.user:
+            return Response(
+                {"detail": "You can only decline requests sent to you."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         if not friend_request.is_pending:
-            return Response({"detail": "Friend request is not pending."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Friend request is not pending."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         decline_friend_request(friend_request)
-        return Response(FriendRequestSerializer(friend_request, context={"request": request}).data)
+        return Response(self.get_serializer(friend_request).data)
 
-
-class FriendRequestCancelView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def post(self, request, pk):
-        friend_request = get_object_or_404(FriendRequest, pk=pk, sender=request.user)
+    @extend_schema(summary="Cancel friend request", tags=["Social - Friends"])
+    @action(detail=True, methods=['post'])
+    def cancel(self, request, pk=None):
+        """Cancel an outgoing friend request."""
+        friend_request = self.get_object()
+        if friend_request.sender != request.user:
+            return Response(
+                {"detail": "You can only cancel requests you sent."},
+                status=status.HTTP_403_FORBIDDEN
+            )
         if not friend_request.is_pending:
-            return Response({"detail": "Friend request is not pending."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response(
+                {"detail": "Friend request is not pending."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
         cancel_friend_request(friend_request)
-        return Response(FriendRequestSerializer(friend_request, context={"request": request}).data)
+        return Response(self.get_serializer(friend_request).data)
 
 
-class FriendListView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+@extend_schema_view(
+    list=extend_schema(summary="List all friendships", tags=["Social - Friends"]),
+)
+class FriendshipViewSet(viewsets.ReadOnlyModelViewSet):
+    """Read-only access to user friendships."""
 
-    def get(self, request):
-        friends = get_friend_snapshot_queryset(request.user)
-        return Response(SocialUserSummarySerializer(friends, many=True, context={"request": request}).data)
+    serializer_class = FriendshipSerializer
+    permission_classes = [IsAuthenticated]
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['created_at']
+    ordering = ['-created_at']
+
+    def get_queryset(self):
+        """Get all friendships for the current user."""
+        user = self.request.user
+        return Friendship.objects.select_related(
+            "user_low__profile", "user_high__profile"
+        ).filter(
+            Q(user_low=user) | Q(user_high=user)
+        )
 
 
-class PresenceSnapshotView(APIView):
-    permission_classes = [permissions.IsAuthenticated]
+@extend_schema_view(
+    list=extend_schema(summary="Get presence snapshot", tags=["Social - Presence"]),
+)
+class PresenceViewSet(viewsets.ReadOnlyModelViewSet):
+    """Real-time presence tracking for friends."""
 
-    def get(self, request):
-        friends = get_friend_snapshot_queryset(request.user)
-        states = UserPresenceState.objects.select_related("user", "user__profile").filter(user__in=friends)
-        return Response(PresenceSnapshotSerializer(states, many=True, context={"request": request}).data)
+    serializer_class = PresenceSnapshotSerializer
+    permission_classes = [IsAuthenticated, IsFriendOrSelf]
+    filter_backends = [filters.OrderingFilter]
+    ordering_fields = ['last_seen']
+    ordering = ['-last_seen']
+
+    def get_queryset(self):
+        """Get presence states for the user's friends."""
+        user = self.request.user
+        friends = get_friend_snapshot_queryset(user)
+        return UserPresenceState.objects.select_related(
+            "user", "user__profile"
+        ).filter(user__in=friends)

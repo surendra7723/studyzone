@@ -1,3 +1,6 @@
-from .base import TasksBaseSerializer
+from .base import TaskSerializer, CategorySerializer
 
-__all__ = ["TasksBaseSerializer"]
+__all__ = [
+    "TaskSerializer",
+    "CategorySerializer",
+]
