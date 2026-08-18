@@ -18,8 +18,8 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
+from apps.user.serializers import SoftDeleteAwareTokenObtainPairView
 from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
     TokenRefreshView,
     TokenVerifyView,
 )
@@ -29,7 +29,6 @@ from drf_spectacular.views import (
     SpectacularSwaggerView,
 )
 
-from apps.server.views.base import ServerBaseView
 from apps.user.views import AdminUserViewSet, UserViewSet, UserProfileViewSet
 from debug_toolbar.toolbar import debug_toolbar_urls
 
@@ -39,8 +38,9 @@ from config import settings
 router = DefaultRouter()
 router.register(r"api/users", UserViewSet, basename="users")
 router.register(r"api/admin/users", AdminUserViewSet, basename="admin-users")
-router.register(r"api/user-profiles", UserProfileViewSet, basename="user-profiles")
-# router.register(r"api/server", ServerBaseView, basename="server")
+router.register(
+    r"api/user-profiles", UserProfileViewSet, basename="user-profiles"
+)
 
 urlpatterns = [
     path("admin/", admin.site.urls),
@@ -55,17 +55,34 @@ urlpatterns = [
         SpectacularRedocView.as_view(url_name="schema"),
         name="redoc",
     ),
-    path("api/auth/token/", TokenObtainPairView.as_view(), name="token_obtain_pair"),
-    path("api/auth/token/refresh/", TokenRefreshView.as_view(), name="token_refresh"),
-    path("api/auth/token/verify/", TokenVerifyView.as_view(), name="token_verify"),
+    path(
+        "api/auth/token/",
+        SoftDeleteAwareTokenObtainPairView.as_view(),
+        name="token_obtain_pair",
+    ),
+    path(
+        "api/auth/token/refresh/",
+        TokenRefreshView.as_view(),
+        name="token_refresh",
+    ),
+    path(
+        "api/auth/token/verify/",
+        TokenVerifyView.as_view(),
+        name="token_verify",
+    ),
     path("api/dictionary/", include("dictionary_app.urls")),
     path("api/tasks/", include("apps.tasks.urls")),
     path("api/social/", include("apps.social.urls")),
     path("api/ambience/", include("apps.ambience.urls")),
+    path("api/pomodoro/", include("apps.pomodoro.urls")),
+    path("api/notifications/", include("apps.notifications.urls")),
+    path("api/server/", include("apps.server.urls")),
 ] + debug_toolbar_urls()
 if settings.DEBUG:
     from django.conf.urls.static import static
 
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    urlpatterns += static(
+        settings.MEDIA_URL, document_root=settings.MEDIA_ROOT
+    )
     urlpatterns += debug_toolbar_urls()
 urlpatterns += router.urls

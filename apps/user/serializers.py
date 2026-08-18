@@ -6,8 +6,25 @@ from django.db import IntegrityError, transaction
 from django.contrib.auth import get_user_model
 from django.utils import timezone
 from rest_framework import serializers
+from rest_framework_simplejwt.serializers import TokenObtainPairSerializer
+from rest_framework_simplejwt.views import TokenObtainPairView
 
-from apps.user.utils import _create_or_update_social_account, _ensure_user_can_sign_in, _generate_unique_username, _hash_token, _issue_jwt_pair, _normalize_email, _validate_facebook_access_token, _validate_google_identity_token, issue_email_verification_token, issue_phone_verification_token, issue_social_link_intent, send_phone_verification_sms, send_registration_email, send_social_link_confirmation_email
+from apps.user.utils import (
+    _create_or_update_social_account,
+    _ensure_user_can_sign_in,
+    _generate_unique_username,
+    _hash_token,
+    _issue_jwt_pair,
+    _normalize_email,
+    _validate_facebook_access_token,
+    _validate_google_identity_token,
+    issue_email_verification_token,
+    issue_phone_verification_token,
+    issue_social_link_intent,
+    send_phone_verification_sms,
+    send_registration_email,
+    send_social_link_confirmation_email,
+)
 
 from .models import SocialAccount, SocialLinkIntent, UserProfile, VerificationToken
 
@@ -508,3 +525,17 @@ class UnlinkSocialAccountSerializer(serializers.Serializer):
 
             social_account.delete()
         return None
+
+
+class SoftDeleteAwareTokenObtainPairSerializer(TokenObtainPairSerializer):
+    def validate(self, attrs):
+        data = super().validate(attrs)
+        if self.user.is_deleted:
+            raise serializers.ValidationError(
+                {"detail": "Your account has been deactivated."}
+            )
+        return data
+
+
+class SoftDeleteAwareTokenObtainPairView(TokenObtainPairView):
+    serializer_class = SoftDeleteAwareTokenObtainPairSerializer

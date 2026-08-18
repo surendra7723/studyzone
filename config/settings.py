@@ -58,6 +58,7 @@ INSTALLED_APPS = [
     "apps.tasks.apps.TasksConfig",
     "apps.pomodoro.apps.PomodoroConfig",
     "apps.ambience.apps.AmbienceConfig",
+    "apps.notifications.apps.NotificationsConfig",
     "debug_toolbar",
     'django_celery_beat',
     "dictionary_app",

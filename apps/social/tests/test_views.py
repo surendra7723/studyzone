@@ -21,7 +21,7 @@ class SocialFriendRequestApiTests(APITestCase):
     @patch("apps.social.views.broadcast_friend_request_event")
     def test_create_friend_request(self, mock_broadcast):
         response = self.client.post(
-            reverse("social-friend-requests"),
+            reverse("social:friend-request-list"),
             {"receiver_username": "bob"},
             format="json",
         )
@@ -36,7 +36,7 @@ class SocialFriendRequestApiTests(APITestCase):
         friend_request = FriendRequest.objects.create(sender=self.sender, receiver=self.receiver)
         self.client.force_authenticate(user=self.receiver)
 
-        response = self.client.post(reverse("social-friend-request-accept", args=[friend_request.pk]))
+        response = self.client.post(reverse("social:friend-request-accept", args=[friend_request.pk]))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(Friendship.objects.count(), 1)
@@ -45,7 +45,7 @@ class SocialFriendRequestApiTests(APITestCase):
 
     def test_reject_self_friend_request(self):
         response = self.client.post(
-            reverse("social-friend-requests"),
+            reverse("social:friend-request-list"),
             {"receiver_id": self.sender.id},
             format="json",
         )
@@ -62,7 +62,7 @@ class SocialPresenceApiTests(APITestCase):
         UserPresenceState.objects.create(user=friend, is_online=True)
         self.client.force_authenticate(user=user)
 
-        response = self.client.get(reverse("social-presence"))
+        response = self.client.get(reverse("social:presence-list"))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(len(response.data), 1)
