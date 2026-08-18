@@ -28,3 +28,4 @@ class GoalSerializer(serializers.ModelSerializer):
     class Meta:
         model = Goal
         fields = ("id", "user", "title", "description", "target_date", "is_completed")
+        read_only_fields = ("id", "user")

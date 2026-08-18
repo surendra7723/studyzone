@@ -6,6 +6,7 @@ from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
 from rest_framework.response import Response
 
+from core.mixins import SoftDeleteMixin
 from core.permissions import IsOwnerOrReadOnly
 from ..models import UserProfile
 from ..serializers import (
@@ -30,14 +31,22 @@ User = get_user_model()
     list=extend_schema(summary="Get current user profile", tags=["Users"]),
     create=extend_schema(summary="Register new user", tags=["Users"]),
 )
-class UserViewSet(viewsets.ViewSet):
+class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
     """ViewSet for user registration and authenticated user operations."""
 
+    queryset = User.objects.all()
     permission_classes = [IsAuthenticated]
     serializer_class = UserRegistrationSerializer
 
     def get_permissions(self):
-        if self.action in {"create", "verify_email", "resend_email_verification", "auth_google", "auth_facebook", "confirm_social_link"}:
+        if self.action in {
+            "create",
+            "verify_email",
+            "resend_email_verification",
+            "auth_google",
+            "auth_facebook",
+            "confirm_social_link",
+        }:
             return [AllowAny()]
         return [IsAuthenticated()]
 
@@ -50,6 +59,8 @@ class UserViewSet(viewsets.ViewSet):
 
     def list(self, request):
         """Get current user profile."""
+        if request.user.is_deleted:
+            return Response(status=status.HTTP_404_NOT_FOUND)
         serializer = UserSerializer(request.user)
         return Response(serializer.data)
 
@@ -125,15 +136,48 @@ class UserViewSet(viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
-class AdminUserViewSet(viewsets.ViewSet):
+class AdminUserViewSet(SoftDeleteMixin, viewsets.ViewSet):
     """Admin-only ViewSet to manage users."""
     permission_classes = [IsAdminUser]
+    queryset = User.objects.all()
+
+    def get_queryset(self):
+        return self.queryset.all()
+
+    def list(self, request):
+        """List all users."""
+        queryset = self.get_queryset()
+        serializer = UserSerializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def retrieve(self, request, pk=None):
+        """Retrieve a specific user."""
+        user = self.get_queryset().get(pk=pk)
+        serializer = UserSerializer(user)
+        return Response(serializer.data)
+
     def create(self, request):
         """Create a new user account (admin only)."""
         serializer = UserRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
         return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+
+    def destroy(self, request, pk=None):
+        """Soft delete a user."""
+        user = self.get_queryset().get(pk=pk)
+        self.perform_destroy(user)
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
+    @action(detail=True, methods=["post"], url_path="restore")
+    def restore(self, request, pk=None):
+        """Restore a soft-deleted user."""
+        user = self.queryset.filter(pk=pk, is_deleted=True).first()
+        if not user:
+            return Response(status=status.HTTP_404_NOT_FOUND)
+        user.is_deleted = False
+        user.save()
+        return Response(UserSerializer(user).data)
 
 
 @extend_schema_view(
@@ -144,17 +188,22 @@ class AdminUserViewSet(viewsets.ViewSet):
     partial_update=extend_schema(summary="Partially update user profile", tags=["User Profiles"]),
     destroy=extend_schema(summary="Delete user profile", tags=["User Profiles"]),
 )
+
+
 class UserProfileViewSet(viewsets.ModelViewSet):
     """ViewSet for managing user profiles."""
     queryset = UserProfile.objects.select_related("user").all()
     serializer_class = UserProfileSerializer
     permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+
     def get_queryset(self):
         """Filter profiles by authenticated user if not admin."""
         queryset = super().get_queryset()
         if self.request.user.is_staff:
-            return queryset
-        return queryset.filter(user=self.request.user)
+            return queryset.filter(user__is_deleted=False)
+        return queryset.filter(
+            user=self.request.user, user__is_deleted=False
+        )
     def perform_create(self, serializer):
         """Create profile for authenticated user."""
         serializer.save(user=self.request.user)

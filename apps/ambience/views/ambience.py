@@ -1,12 +1,16 @@
 from rest_framework.generics import ListAPIView
+from rest_framework.permissions import AllowAny
+
+from core.mixins import PaginationMixin
 
 from ..models import AmbienceTrack, Category
 from ..serializers import AmbienceCategorySerializer, AmbienceTrackSerializer
 
 
-class AmbienceTrackListView(ListAPIView):
+class AmbienceTrackListView(PaginationMixin, ListAPIView):
     queryset = AmbienceTrack.objects.filter(is_active=True)
     serializer_class = AmbienceTrackSerializer
+    permission_classes = [AllowAny]
 
     def get_queryset(self):
         queryset = super().get_queryset()
@@ -16,6 +20,7 @@ class AmbienceTrackListView(ListAPIView):
         return queryset
 
 
-class AmbienceCategoryListView(ListAPIView):
+class AmbienceCategoryListView(PaginationMixin, ListAPIView):
     queryset = Category.objects.all()
     serializer_class = AmbienceCategorySerializer
+    permission_classes = [AllowAny]
