@@ -5,7 +5,7 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 from unittest.mock import Mock, patch
 
-from .models import SocialAccount, SocialLinkIntent, User, VerificationToken
+from ..models import SocialAccount, SocialLinkIntent, User, VerificationToken
 
 
 @override_settings(EMAIL_BACKEND="django.core.mail.backends.locmem.EmailBackend")
