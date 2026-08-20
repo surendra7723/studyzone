@@ -8,7 +8,7 @@ from rest_framework.pagination import PageNumberPagination
 class UserFilterMixin:
     """
     Automatically filters queryset by request.user and sets user on creation.
-    
+
     Usage:
         class MyViewSet(UserFilterMixin, viewsets.ModelViewSet):
             queryset = MyModel.objects.all()
@@ -30,9 +30,9 @@ class UserFilterMixin:
 class SoftDeleteMixin:
     """
     Implements soft delete instead of hard delete.
-    
+
     Requires model to have 'is_deleted' BooleanField.
-    
+
     Usage:
         class MyViewSet(SoftDeleteMixin, viewsets.ModelViewSet):
             queryset = MyModel.objects.all()
@@ -59,7 +59,7 @@ class SoftDeleteMixin:
 class TimestampMixin:
     """
     Provides automatic timestamp handling.
-    
+
     Ensures updated_at is set on update operations.
     """
 
@@ -74,7 +74,7 @@ class TimestampMixin:
 class PaginationMixin:
     """
     Provides consistent pagination across views.
-    
+
     Usage:
         class MyViewSet(PaginationMixin, viewsets.ModelViewSet):
             queryset = MyModel.objects.all()
@@ -87,3 +87,17 @@ class PaginationMixin:
         max_page_size = 100
 
     pagination_class = StandardPagination
+
+
+class UserScopedQuerySetMixin:
+    """
+    Filters the viewset queryset by the current user.
+
+    Requires the viewset's `queryset` to provide a `for_user(user)` method,
+    typically via a custom QuerySet registered with QuerySet.as_manager().
+    """
+
+    def get_queryset(self):
+        if getattr(self, "swagger_fake_view", False):
+            return self.queryset.none()
+        return self.queryset.for_user(self.request.user)

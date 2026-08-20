@@ -1,3 +1,4 @@
+from typing import Optional
 import re
 import logging
 
@@ -72,14 +73,14 @@ class UserSerializer(serializers.ModelSerializer):
             "linked_providers",
         )
 
-    def get_profile(self, obj):
+    def get_profile(self, obj: User) -> Optional[dict]:
         try:
             profile = obj.profile
         except User.profile.RelatedObjectDoesNotExist:
             return None
         return UserProfileSerializer(profile).data
 
-    def get_linked_providers(self, obj):
+    def get_linked_providers(self, obj: User) -> list[str]:
         return list(obj.social_accounts.values_list("provider", flat=True))
 
 

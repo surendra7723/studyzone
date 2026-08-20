@@ -9,6 +9,7 @@ from .services import ExternalDictionaryService
 
 class DictionaryLookupView(APIView):
     """Look up a word using the public Free Dictionary API."""
+    serializer_class = DictionaryResponseSerializer
 
     authentication_classes = []
     permission_classes = []

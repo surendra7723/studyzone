@@ -43,7 +43,7 @@ router.register(
 )
 
 urlpatterns = [
-    path("admin/", admin.site.urls),
+    path("dj-admin/", admin.site.urls),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/swagger/",
