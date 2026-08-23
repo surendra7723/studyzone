@@ -1,41 +1,47 @@
-"""
-Core permission classes for API access control.
-"""
-from rest_framework import permissions
-from rest_framework.permissions import IsAuthenticatedOrReadOnly
 
-# Re-export a project-scoped name for convenience and to keep this module useful
-IsAuthenticatedOrReadOnlyPermission = IsAuthenticatedOrReadOnly
+from rest_framework import permissions
+
+
+class IsNotDeleted(permissions.BasePermission):
+    message = "Your account has been deactivated."
+
+    def has_permission(self, request, view):
+        user = getattr(request, "user", None)
+        return bool(user and user.is_authenticated and not user.is_deleted)
+
+
+class IsAuthenticatedAndActive(permissions.BasePermission):
+    def has_permission(self, request, view):
+        if not (request.user and request.user.is_authenticated):
+            return False
+        return not request.user.is_deleted
+
+
+class IsOwner(permissions.BasePermission):
+    message = "You must be the owner of this object."
+
+    def has_object_permission(self, request, view, obj):
+        owner = None
+        if hasattr(obj, "get_owner"):
+            owner = obj.get_owner()
+        elif hasattr(obj, "user"):
+            owner = obj.user
+        elif isinstance(obj, type(request.user)) and obj == request.user:
+            owner = request.user
+        return owner == request.user
 
 
 class IsOwnerOrReadOnly(permissions.BasePermission):
-    """
-    Permission to only allow owners of an object to edit it.
-    
-    Assumes the model instance has a `user` attribute.
-    """
+    message = "You do not have permission to modify this object."
 
     def has_object_permission(self, request, view, obj):
-        # Read permissions are allowed for any request
         if request.method in permissions.SAFE_METHODS:
             return True
-
-        # Write permissions are only allowed to the owner
-        return obj.user == request.user
-
-
-class IsVerifiedUser(permissions.BasePermission):
-    """
-    Permission to only allow verified users (email or phone).
-    
-    Useful for sensitive operations that require account verification.
-    """
-
-    message = "You must verify your email or phone number to perform this action."
-
-    def has_permission(self, request, view):
-        if not request.user or not request.user.is_authenticated:
-            return False
-        
-        # Allow if either email or phone is verified
-        return request.user.is_email_verified or request.user.is_phone_verified
+        owner = None
+        if hasattr(obj, "get_owner"):
+            owner = obj.get_owner()
+        elif hasattr(obj, "user"):
+            owner = obj.user
+        elif isinstance(obj, type(request.user)) and obj == request.user:
+            owner = request.user
+        return owner == request.user

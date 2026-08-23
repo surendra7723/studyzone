@@ -6,11 +6,11 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiParameter
 from rest_framework import filters, status
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+
 from rest_framework.response import Response
 
 from core.views import UserScopedViewSet, BulkOperationsViewSet
-from core.permissions import IsOwnerOrReadOnly
+from core.permissions import IsAuthenticatedAndActive, IsOwnerOrReadOnly
 from ..models import Task, Category
 from ..serializers import TaskSerializer, CategorySerializer
 
@@ -44,7 +44,7 @@ class TaskViewSet(BulkOperationsViewSet):
     
     queryset = Task.objects.select_related('category', 'user').all()
     serializer_class = TaskSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedAndActive, IsOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend, filters.SearchFilter, filters.OrderingFilter]
     filterset_fields = ['category', 'priority', 'is_completed']
     search_fields = ['title', 'description']
@@ -106,7 +106,7 @@ class CategoryViewSet(UserScopedViewSet):
     
     queryset = Category.objects.all()
     serializer_class = CategorySerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedAndActive, IsOwnerOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['name']
     ordering_fields = ['name', 'created_at']

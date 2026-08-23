@@ -6,7 +6,10 @@ from django.db import models
 from .base import BaseTasksModel
 
 
-class Category(BaseTasksModel):
+from core.mixins import OwnedModel
+
+
+class Category(OwnedModel, BaseTasksModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="categories"
     )
@@ -40,7 +43,7 @@ class Category(BaseTasksModel):
         return self.name
 
 
-class Task(BaseTasksModel):
+class Task(OwnedModel, BaseTasksModel):
     class Priority(models.IntegerChoices):
         LOW = 1, "Low"
         MEDIUM = 2, "Medium"

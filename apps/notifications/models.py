@@ -6,7 +6,11 @@ from core.models.base import TimeStampedModel
 User = get_user_model()
 
 
-class Notification(TimeStampedModel):
+from core.mixins import OwnedModel
+
+
+class Notification(OwnedModel, TimeStampedModel):
+    owner_field = "recipient"
     recipient = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="notifications"
     )

@@ -4,7 +4,8 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 
-from core.mixins import SoftDeleteMixin, PaginationMixin
+from core.mixins import SoftDeleteMixin, PaginationMixin, UserFilterMixin
+from core.permissions import IsOwnerOrReadOnly
 from drf_spectacular.utils import (
     extend_schema,
     extend_schema_view,
@@ -61,15 +62,12 @@ from .serializers import NotificationSerializer
         tags=["Notifications"],
     ),
 )
-class NotificationViewSet(SoftDeleteMixin, PaginationMixin, ModelViewSet):
+class NotificationViewSet(SoftDeleteMixin, PaginationMixin, UserFilterMixin, ModelViewSet):
     queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsOwnerOrReadOnly]
     filter_backends = [DjangoFilterBackend]
     filterset_fields = ["read"]
-
-    def get_queryset(self):
-        return super().get_queryset().filter(recipient=self.request.user)
 
     def perform_create(self, serializer):
         serializer.save(recipient=self.request.user)
