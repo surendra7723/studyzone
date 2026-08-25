@@ -1,6 +1,4 @@
-"""
-Generic reusable ViewSets with common patterns.
-"""
+
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
@@ -100,6 +98,8 @@ class BulkOperationsViewSet(UserFilterMixin, viewsets.ModelViewSet):
             if not instance:
                 continue
 
+            self.check_object_permissions(request, instance)
+
             serializer = self.get_serializer(
                 instance, data=item_data, partial=True
             )
@@ -128,6 +128,9 @@ class BulkOperationsViewSet(UserFilterMixin, viewsets.ModelViewSet):
             )
 
         queryset = self.get_queryset().filter(id__in=ids)
+        for instance in queryset:
+            self.check_object_permissions(request, instance)
+
         count = queryset.count()
         queryset.delete()
 

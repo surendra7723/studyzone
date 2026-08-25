@@ -1,6 +1,8 @@
 from channels.db import database_sync_to_async
 from channels.generic.websocket import AsyncJsonWebsocketConsumer
+from django.db.models import Q
 
+from .models import Friendship
 from .services import (
     broadcast_presence_change,
     mark_user_offline,
@@ -14,6 +16,15 @@ class SocialPresenceConsumer(AsyncJsonWebsocketConsumer):
     async def connect(self):
         user = self.scope.get("user")
         if not user or not user.is_authenticated:
+            await self.close(code=4401)
+            return
+
+        has_friends = await database_sync_to_async(
+            lambda: Friendship.objects.filter(
+                Q(user_low=user) | Q(user_high=user)
+            ).exists()
+        )()
+        if not has_friends:
             await self.close(code=4401)
             return
 

@@ -6,6 +6,9 @@ from django.utils import timezone
 
 
 # Create your models here.
+from core.mixins import OwnedModel
+
+
 class User(AbstractUser):
     is_deleted = models.BooleanField(default=False)
     phone_number = models.CharField(
@@ -27,7 +30,8 @@ class User(AbstractUser):
         return self.username
 
 
-class UserProfile(models.Model):
+class UserProfile(OwnedModel, models.Model):
+    owner_field = "user"
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
     bio = models.TextField(blank=True, null=True)
     profile_picture = models.ImageField(

@@ -7,7 +7,7 @@ from django_filters.rest_framework import DjangoFilterBackend
 from drf_spectacular.utils import extend_schema, extend_schema_view
 from rest_framework import filters, status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from core.permissions import IsAuthenticatedAndActive
 from rest_framework.response import Response
 
 from core.permissions import IsFriendOrSelf
@@ -35,7 +35,7 @@ class FriendRequestViewSet(viewsets.ModelViewSet):
     """Manage friend requests with full CRUD operations."""
 
     serializer_class = FriendRequestSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedAndActive]
     filter_backends = [DjangoFilterBackend, filters.OrderingFilter]
     filterset_fields = ['status']
     ordering_fields = ['created_at']
@@ -154,7 +154,7 @@ class FriendshipViewSet(viewsets.ReadOnlyModelViewSet):
     """Read-only access to user friendships."""
 
     serializer_class = FriendshipSerializer
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedAndActive]
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['created_at']
     ordering = ['-created_at']
@@ -178,7 +178,7 @@ class PresenceViewSet(viewsets.ReadOnlyModelViewSet):
     """Real-time presence tracking for friends."""
 
     serializer_class = PresenceSnapshotSerializer
-    permission_classes = [IsAuthenticated, IsFriendOrSelf]
+    permission_classes = [IsAuthenticatedAndActive, IsFriendOrSelf]
     filter_backends = [filters.OrderingFilter]
     ordering_fields = ['last_seen']
     ordering = ['-last_seen']

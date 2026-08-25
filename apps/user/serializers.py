@@ -38,6 +38,9 @@ SOCIAL_PROVIDER_CHOICES = [
     SocialAccount.PROVIDER_FACEBOOK,
 ]
 
+from core.serializers import FieldRestrictedSerializer
+
+
 class UserProfileSerializer(serializers.ModelSerializer):
     class Meta:
         model = UserProfile
@@ -54,9 +57,16 @@ class UserProfileSerializer(serializers.ModelSerializer):
         )
 
 
-class UserSerializer(serializers.ModelSerializer):
+class UserSerializer(FieldRestrictedSerializer):
     profile = serializers.SerializerMethodField()
     linked_providers = serializers.SerializerMethodField()
+
+    restricted_fields = (
+        "is_staff",
+        "is_email_verified",
+        "is_phone_verified",
+        "phone_number",
+    )
 
     class Meta:
         model = User
@@ -312,10 +322,11 @@ class _BaseSocialAuthSerializer(serializers.Serializer):
 
     def _build_success_response(self, user):
         _ensure_user_can_sign_in(user)
+        request = self.context.get("request")
         return {
             "requires_confirmation": False,
             "detail": "Social authentication successful.",
-            "user": UserSerializer(user).data,
+            "user": UserSerializer(user, context={"request": request}).data,
             "tokens": _issue_jwt_pair(user),
         }
 
@@ -450,7 +461,7 @@ class ConfirmSocialLinkSerializer(serializers.Serializer):
         return {
             "detail": "Social account linked successfully.",
             "requires_confirmation": False,
-            "user": UserSerializer(user).data,
+            "user": UserSerializer(user, context={"request": self.context.get("request")}).data,
             "tokens": _issue_jwt_pair(user),
         }
 

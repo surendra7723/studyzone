@@ -22,7 +22,7 @@ class UserSoftDeleteApiTests(APITestCase):
         self.user.is_deleted = True
         self.user.save()
         response = self.client.get(reverse("users-list"))
-        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
     def test_soft_deleted_user_cannot_login(self):
         self.user.is_deleted = True

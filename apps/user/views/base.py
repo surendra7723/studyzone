@@ -3,11 +3,11 @@ from django.contrib.auth import get_user_model
 from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample, OpenApiParameter
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
-from rest_framework.permissions import AllowAny, IsAdminUser, IsAuthenticated
+from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework.response import Response
 
 from core.mixins import SoftDeleteMixin
-from core.permissions import IsOwnerOrReadOnly
+from core.permissions import IsAuthenticatedAndActive, IsOwnerOrReadOnly
 from ..models import UserProfile
 from ..serializers import (
     ConfirmSocialLinkSerializer,
@@ -35,7 +35,7 @@ class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
     """ViewSet for user registration and authenticated user operations."""
 
     queryset = User.objects.all()
-    permission_classes = [IsAuthenticated]
+    permission_classes = [IsAuthenticatedAndActive]
     serializer_class = UserRegistrationSerializer
 
     def get_permissions(self):
@@ -48,20 +48,20 @@ class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
             "confirm_social_link",
         }:
             return [AllowAny()]
-        return [IsAuthenticated()]
+        return [IsAuthenticatedAndActive()]
 
     def create(self, request):
         """Create a new user account."""
         serializer = UserRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(UserSerializer(user, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
     def list(self, request):
         """Get current user profile."""
         if request.user.is_deleted:
             return Response(status=status.HTTP_404_NOT_FOUND)
-        serializer = UserSerializer(request.user)
+        serializer = UserSerializer(request.user, context={"request": request})
         return Response(serializer.data)
 
     @extend_schema(summary="Verify email with token", description="Verify email with token", tags=["Users"])
@@ -72,7 +72,7 @@ class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
         serializer = VerifyEmailSerializer(data={"token": token})
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response({"detail": "Email verified successfully.", "user": UserSerializer(user).data}, status=status.HTTP_200_OK)
+        return Response({"detail": "Email verified successfully.", "user": UserSerializer(user, context={"request": request}).data}, status=status.HTTP_200_OK)
 
     @extend_schema(summary="Verify phone with SMS code", description="Verify phone with SMS code", tags=["Users"])
     @action(detail=False, methods=["get", "post"], permission_classes=[AllowAny], url_path="verify-phone")
@@ -82,7 +82,7 @@ class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
         serializer = VerifyPhoneSerializer(data={"token": token})
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response({"detail": "Phone verified successfully.", "user": UserSerializer(user).data}, status=status.HTTP_200_OK)
+        return Response({"detail": "Phone verified successfully.", "user": UserSerializer(user, context={"request": request}).data}, status=status.HTTP_200_OK)
 
     @extend_schema(summary="Resend email verification token", description="Resend email verification token", tags=["Users"])
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path="resend-email-verification")
@@ -171,13 +171,13 @@ class AdminUserViewSet(SoftDeleteMixin, viewsets.ViewSet):
     def list(self, request):
         """List all users."""
         queryset = self.get_queryset()
-        serializer = UserSerializer(queryset, many=True)
+        serializer = UserSerializer(queryset, many=True, context={"request": request})
         return Response(serializer.data)
 
     def retrieve(self, request, pk=None):
         """Retrieve a specific user."""
         user = self.get_queryset().get(pk=pk)
-        serializer = UserSerializer(user)
+        serializer = UserSerializer(user, context={"request": request})
         return Response(serializer.data)
 
     def create(self, request):
@@ -185,7 +185,7 @@ class AdminUserViewSet(SoftDeleteMixin, viewsets.ViewSet):
         serializer = UserRegistrationSerializer(data=request.data)
         serializer.is_valid(raise_exception=True)
         user = serializer.save()
-        return Response(UserSerializer(user).data, status=status.HTTP_201_CREATED)
+        return Response(UserSerializer(user, context={"request": request}).data, status=status.HTTP_201_CREATED)
 
     def destroy(self, request, pk=None):
         """Soft delete a user."""
@@ -201,7 +201,7 @@ class AdminUserViewSet(SoftDeleteMixin, viewsets.ViewSet):
             return Response(status=status.HTTP_404_NOT_FOUND)
         user.is_deleted = False
         user.save()
-        return Response(UserSerializer(user).data)
+        return Response(UserSerializer(user, context={"request": request}).data)
 
 
 @extend_schema_view(
@@ -218,7 +218,7 @@ class UserProfileViewSet(viewsets.ModelViewSet):
     """ViewSet for managing user profiles."""
     queryset = UserProfile.objects.select_related("user").all()
     serializer_class = UserProfileSerializer
-    permission_classes = [IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [IsAuthenticatedAndActive, IsOwnerOrReadOnly]
 
     def get_queryset(self):
         """Filter profiles by authenticated user if not admin."""

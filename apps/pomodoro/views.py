@@ -1,4 +1,4 @@
-from rest_framework import permissions, viewsets
+from rest_framework import viewsets
 from rest_framework.response import Response
 from rest_framework.decorators import action
 from drf_spectacular.utils import (
@@ -7,6 +7,8 @@ from drf_spectacular.utils import (
     OpenApiParameter,
 )
 
+from core.views import UserScopedViewSet
+from core.permissions import IsAuthenticatedAndActive
 from core.mixins import PaginationMixin
 from .models import PomodoroSession, Goal
 from .serializers import PomodoroSessionSerializer, GoalSerializer
@@ -44,16 +46,10 @@ from .serializers import PomodoroSessionSerializer, GoalSerializer
         tags=["Pomodoro - Sessions"],
     ),
 )
-class PomodoroSessionViewSet(viewsets.ModelViewSet):
+class PomodoroSessionViewSet(UserScopedViewSet):
     queryset = PomodoroSession.objects.all()
     serializer_class = PomodoroSessionSerializer
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
+    permission_classes = [IsAuthenticatedAndActive]
 
 
 @extend_schema_view(
@@ -102,17 +98,11 @@ class PomodoroSessionViewSet(viewsets.ModelViewSet):
         tags=["Pomodoro - Goals"],
     ),
 )
-class GoalViewSet(PaginationMixin, viewsets.ModelViewSet):
+class GoalViewSet(PaginationMixin, UserScopedViewSet):
     queryset = Goal.objects.all()
     serializer_class = GoalSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedAndActive]
     ordering = ["target_date", "title"]
-
-    def get_queryset(self):
-        return self.queryset.filter(user=self.request.user)
-
-    def perform_create(self, serializer):
-        serializer.save(user=self.request.user)
 
     @extend_schema(
         summary="Toggle goal completion",

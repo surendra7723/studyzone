@@ -1,15 +1,15 @@
 from .base import (
-    IsAuthenticatedOrReadOnly,
+    IsAuthenticatedAndActive,
+    IsNotDeleted,
+    IsOwner,
     IsOwnerOrReadOnly,
-    IsVerifiedUser,
 )
-from .social import (
-    IsFriendOrSelf,
-)
+from .social import IsFriendOrSelf
 
 __all__ = [
-    "IsAuthenticatedOrReadOnly",
+    "IsAuthenticatedAndActive",
+    "IsNotDeleted",
+    "IsOwner",
     "IsOwnerOrReadOnly",
-    "IsVerifiedUser",
     "IsFriendOrSelf",
 ]

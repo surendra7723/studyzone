@@ -57,7 +57,10 @@ class PomodoroSessionManager(models.Manager.from_queryset(PomodoroSessionQuerySe
         return self._get_truncated_summary(user, TruncYear)
 
 
-class PomodoroSession(TimeStampedModel):
+from core.mixins import OwnedModel
+
+
+class PomodoroSession(OwnedModel, TimeStampedModel):
     class SessionType(models.TextChoices):
         FOCUS = "focus", "Focus"
         SHORT_BREAK = "short_break", "Short Break"
@@ -130,7 +133,7 @@ class TaskSession(TimeStampedModel):
         return f"TaskSession {self.id} — Task {self.task.title}"
 
 
-class Goal(TimeStampedModel):
+class Goal(OwnedModel, TimeStampedModel):
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name="goals"
     )

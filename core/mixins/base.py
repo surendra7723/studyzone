@@ -18,8 +18,10 @@ class UserFilterMixin:
     def get_queryset(self):
         """Filter queryset to only include objects owned by the current user."""
         queryset = super().get_queryset()
-        if hasattr(queryset.model, "user"):
-            return queryset.filter(user=self.request.user)
+        model = queryset.model
+        owner_field = getattr(model, "get_owner_field", lambda: "user")()
+        if hasattr(model, owner_field):
+            return queryset.filter(**{owner_field: self.request.user})
         return queryset
 
     def perform_create(self, serializer):
