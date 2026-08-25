@@ -1,6 +1,4 @@
-"""
-Serializers for Task and Category models.
-"""
+from typing import Optional
 from django.utils import timezone
 from rest_framework import serializers
 
@@ -17,7 +15,7 @@ class CategorySerializer(serializers.ModelSerializer):
         fields = ['id', 'name', 'color', 'created_at', 'updated_at', 'task_count']
         read_only_fields = ['id', 'created_at', 'updated_at']
     
-    def get_task_count(self, obj):
+    def get_task_count(self, obj: Category) -> int:
         """Get the number of tasks in this category."""
         return obj.tasks.count() if hasattr(obj, 'tasks') else 0
     
@@ -51,7 +49,7 @@ class TaskSerializer(serializers.ModelSerializer):
         ]
         read_only_fields = ['id', 'created_at', 'updated_at', 'is_overdue']
     
-    def get_is_overdue(self, obj):
+    def get_is_overdue(self, obj: Task) -> bool:
         """Check if task is overdue."""
         if obj.due_date and not obj.is_completed:
             return obj.due_date < timezone.now()

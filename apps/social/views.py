@@ -43,6 +43,8 @@ class FriendRequestViewSet(viewsets.ModelViewSet):
 
     def get_queryset(self):
         """Get all friend requests for the current user (sent and received)."""
+        if getattr(self, "swagger_fake_view", False):
+            return FriendRequest.objects.none()
         user = self.request.user
         return FriendRequest.objects.select_related(
             "sender", "receiver"
@@ -159,6 +161,8 @@ class FriendshipViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Get all friendships for the current user."""
+        if getattr(self, "swagger_fake_view", False):
+            return Friendship.objects.none()
         user = self.request.user
         return Friendship.objects.select_related(
             "user_low__profile", "user_high__profile"
@@ -181,6 +185,8 @@ class PresenceViewSet(viewsets.ReadOnlyModelViewSet):
 
     def get_queryset(self):
         """Get presence states for the user's friends."""
+        if getattr(self, "swagger_fake_view", False):
+            return UserPresenceState.objects.none()
         user = self.request.user
         friends = get_friend_snapshot_queryset(user)
         return UserPresenceState.objects.select_related(

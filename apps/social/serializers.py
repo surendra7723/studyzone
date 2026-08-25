@@ -1,3 +1,5 @@
+from typing import Optional
+
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from rest_framework import serializers
@@ -17,18 +19,18 @@ class SocialUserSummarySerializer(serializers.ModelSerializer):
         model = User
         fields = ("id", "username", "avatar_url", "is_online", "last_seen")
 
-    def get_avatar_url(self, obj):
+    def get_avatar_url(self, obj: User) -> Optional[str]:
         profile = getattr(obj, "profile", None)
         picture = getattr(profile, "profile_picture", None)
         if picture and hasattr(picture, "url"):
             return picture.url
         return None
 
-    def get_is_online(self, obj):
+    def get_is_online(self, obj: User) -> bool:
         presence = getattr(obj, "presence_state", None)
         return bool(presence and presence.is_online)
 
-    def get_last_seen(self, obj):
+    def get_last_seen(self, obj: User) -> Optional[str]:
         presence = getattr(obj, "presence_state", None)
         return presence.last_seen if presence else None
 
@@ -40,7 +42,7 @@ class FriendshipSerializer(serializers.ModelSerializer):
         model = Friendship
         fields = ("id", "friend", "created_at")
 
-    def get_friend(self, obj):
+    def get_friend(self, obj: Friendship) -> dict:
         request_user = self.context["request"].user
         return SocialUserSummarySerializer(obj.other_user(request_user), context=self.context).data
 

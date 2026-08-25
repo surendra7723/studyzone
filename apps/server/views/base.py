@@ -3,13 +3,20 @@ from rest_framework import status
 from rest_framework.request import Request
 from rest_framework.permissions import AllowAny
 from django.utils.timezone import now
+from drf_spectacular.utils import extend_schema
 from core.views import BaseAPIView
 from ..mixins.checker  import ServerCheckerMixin
 
 
+@extend_schema(
+    summary="Server health check",
+    description="Liveness and readiness probe endpoints",
+    tags=["Server"],
+)
 class ServerBaseView(BaseAPIView, ServerCheckerMixin):
     """Base view for server with standard response helpers."""
     permission_classes = [AllowAny]
+    serializer_class = None
 
     def get(self, request, *args, **kwargs) -> Response:
         if request.resolver_match.url_name == "live":

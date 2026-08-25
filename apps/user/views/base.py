@@ -1,6 +1,6 @@
 """User management views - Phase 4 Refactored."""
 from django.contrib.auth import get_user_model
-from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample
+from drf_spectacular.utils import extend_schema, extend_schema_view, OpenApiExample, OpenApiParameter
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.permissions import AllowAny, IsAdminUser
@@ -64,6 +64,7 @@ class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
         serializer = UserSerializer(request.user, context={"request": request})
         return Response(serializer.data)
 
+    @extend_schema(summary="Verify email with token", description="Verify email with token", tags=["Users"])
     @action(detail=False, methods=["get", "post"], permission_classes=[AllowAny], url_path="verify-email")
     def verify_email(self, request):
         """Verify email with token."""
@@ -73,6 +74,7 @@ class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
         user = serializer.save()
         return Response({"detail": "Email verified successfully.", "user": UserSerializer(user, context={"request": request}).data}, status=status.HTTP_200_OK)
 
+    @extend_schema(summary="Verify phone with SMS code", description="Verify phone with SMS code", tags=["Users"])
     @action(detail=False, methods=["get", "post"], permission_classes=[AllowAny], url_path="verify-phone")
     def verify_phone(self, request):
         """Verify phone with SMS code."""
@@ -82,6 +84,7 @@ class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
         user = serializer.save()
         return Response({"detail": "Phone verified successfully.", "user": UserSerializer(user, context={"request": request}).data}, status=status.HTTP_200_OK)
 
+    @extend_schema(summary="Resend email verification token", description="Resend email verification token", tags=["Users"])
     @action(detail=False, methods=["post"], permission_classes=[AllowAny], url_path="resend-email-verification")
     def resend_email_verification(self, request):
         """Resend email verification token."""
@@ -116,6 +119,7 @@ class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
         result = serializer.save()
         return Response(result, status=status.HTTP_200_OK)
 
+    @extend_schema(summary="Manage linked social accounts", description="List or link social accounts", tags=["Users"])
     @action(detail=False, methods=["get", "post"], url_path="linked-accounts")
     def linked_accounts(self, request):
         """Manage linked social accounts."""
@@ -127,6 +131,19 @@ class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
         social_account = serializer.save(user=request.user)
         return Response(SocialAccountSerializer(social_account).data, status=status.HTTP_200_OK)
 
+    @extend_schema(
+        summary="Unlink a social account",
+        description="Unlink a social account by provider",
+        tags=["Users"],
+        parameters=[
+            OpenApiParameter(
+                name="provider",
+                description="Social provider name (e.g. google, facebook)",
+                required=True,
+                type=str,
+            ),
+        ],
+    )
     @action(detail=False, methods=["delete"], url_path=r"linked-accounts/(?P<provider>[^/.]+)")
     def unlink_linked_account(self, request, provider=None):
         """Unlink a social account."""
@@ -136,10 +153,17 @@ class UserViewSet(SoftDeleteMixin, viewsets.ViewSet):
         return Response(status=status.HTTP_204_NO_CONTENT)
 
 
+@extend_schema_view(
+    list=extend_schema(summary="List all users (admin)", tags=["Admin - Users"]),
+    retrieve=extend_schema(summary="Get user details (admin)", tags=["Admin - Users"]),
+    create=extend_schema(summary="Create user (admin)", tags=["Admin - Users"]),
+    destroy=extend_schema(summary="Soft delete user (admin)", tags=["Admin - Users"]),
+)
 class AdminUserViewSet(SoftDeleteMixin, viewsets.ViewSet):
     """Admin-only ViewSet to manage users."""
     permission_classes = [IsAdminUser]
     queryset = User.objects.all()
+    serializer_class = UserSerializer
 
     def get_queryset(self):
         return self.queryset.all()
