@@ -17,6 +17,7 @@ asgiref==3.12.1
     #   channels
     #   channels-redis
     #   django
+    #   django-cors-headers
 attrs==26.1.0
     # via
     #   aiohttp
@@ -62,12 +63,15 @@ django==5.2.17
     #   channels
     #   dj-database-url
     #   django-celery-beat
+    #   django-cors-headers
     #   django-filter
     #   django-timezone-field
     #   djangorestframework
     #   djangorestframework-simplejwt
     #   drf-spectacular
 django-celery-beat==2.9.0
+    # via -r requirements/base.in
+django-cors-headers==4.6.0
     # via -r requirements/base.in
 django-filter==25.1
     # via -r requirements/base.in

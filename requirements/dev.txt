@@ -27,6 +27,7 @@ asgiref==3.12.1
     #   channels
     #   channels-redis
     #   django
+    #   django-cors-headers
 asttokens==3.0.2
     # via stack-data
 attrs==26.1.0
@@ -109,6 +110,7 @@ django==5.2.17
     #   channels
     #   dj-database-url
     #   django-celery-beat
+    #   django-cors-headers
     #   django-debug-toolbar
     #   django-extensions
     #   django-filter
@@ -117,6 +119,10 @@ django==5.2.17
     #   djangorestframework-simplejwt
     #   drf-spectacular
 django-celery-beat==2.9.0
+    # via
+    #   -c requirements/base.txt
+    #   -r requirements/base.in
+django-cors-headers==4.6.0
     # via
     #   -c requirements/base.txt
     #   -r requirements/base.in
