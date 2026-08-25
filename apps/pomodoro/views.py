@@ -46,7 +46,7 @@ from .serializers import PomodoroSessionSerializer, GoalSerializer
         tags=["Pomodoro - Sessions"],
     ),
 )
-class PomodoroSessionViewSet(viewsets.ModelViewSet):
+class PomodoroSessionViewSet(UserScopedViewSet):
     queryset = PomodoroSession.objects.all()
     serializer_class = PomodoroSessionSerializer
     permission_classes = [IsAuthenticatedAndActive]
