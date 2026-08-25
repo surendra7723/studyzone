@@ -12,6 +12,38 @@ from .models import PomodoroSession, Goal
 from .serializers import PomodoroSessionSerializer, GoalSerializer
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List pomodoro sessions",
+        description="Returns all pomodoro sessions for the authenticated user",
+        tags=["Pomodoro - Sessions"],
+    ),
+    create=extend_schema(
+        summary="Create a pomodoro session",
+        description="Create a new pomodoro session",
+        tags=["Pomodoro - Sessions"],
+    ),
+    retrieve=extend_schema(
+        summary="Get pomodoro session details",
+        description="Retrieve details of a specific pomodoro session",
+        tags=["Pomodoro - Sessions"],
+    ),
+    update=extend_schema(
+        summary="Update a pomodoro session",
+        description="Update all fields of a pomodoro session",
+        tags=["Pomodoro - Sessions"],
+    ),
+    partial_update=extend_schema(
+        summary="Partially update a pomodoro session",
+        description="Update specific fields of a pomodoro session",
+        tags=["Pomodoro - Sessions"],
+    ),
+    destroy=extend_schema(
+        summary="Delete a pomodoro session",
+        description="Delete a pomodoro session permanently",
+        tags=["Pomodoro - Sessions"],
+    ),
+)
 class PomodoroSessionViewSet(viewsets.ModelViewSet):
     queryset = PomodoroSession.objects.all()
     serializer_class = PomodoroSessionSerializer

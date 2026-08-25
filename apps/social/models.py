@@ -14,6 +14,16 @@ class FriendRequestStatus(models.TextChoices):
     CANCELLED = "cancelled", "Cancelled"
 
 
+class FriendshipQuerySet(models.QuerySet):
+    def with_related(self):
+        return self.select_related("user_low__profile", "user_high__profile")
+
+    def for_user(self, user):
+        return self.with_related().filter(
+            Q(user_low=user) | Q(user_high=user)
+        )
+
+
 class Friendship(TimeStampedModel):
     user_low = models.ForeignKey(
         settings.AUTH_USER_MODEL,
@@ -50,6 +60,8 @@ class Friendship(TimeStampedModel):
             models.Index(fields=["created_at"]),
         ]
 
+    objects = FriendshipQuerySet.as_manager()
+
     @classmethod
     def create_for_users(cls, user_a, user_b, accepted_request=None):
         if user_a.pk == user_b.pk:
@@ -74,6 +86,16 @@ class Friendship(TimeStampedModel):
 
     def __str__(self):
         return f"{self.user_low.username} <-> {self.user_high.username}"
+
+
+class FriendRequestQuerySet(models.QuerySet):
+    def with_related(self):
+        return self.select_related("sender", "receiver")
+
+    def for_user(self, user):
+        return self.with_related().filter(
+            Q(sender=user) | Q(receiver=user)
+        )
 
 
 class FriendRequest(TimeStampedModel):
@@ -108,6 +130,8 @@ class FriendRequest(TimeStampedModel):
             models.Index(fields=["sender", "status", "created_at"]),
         ]
 
+    objects = FriendRequestQuerySet.as_manager()
+
     def clean(self):
         if self.sender_id and self.receiver_id and self.sender_id == self.receiver_id:
             raise ValidationError({"receiver": "You cannot send a request to yourself."})
@@ -125,6 +149,16 @@ class FriendRequest(TimeStampedModel):
         return f"{self.sender.username} -> {self.receiver.username} ({self.status})"
 
 
+class UserPresenceStateQuerySet(models.QuerySet):
+    def with_related(self):
+        return self.select_related("user", "user__profile")
+
+    def for_user_friends(self, user):
+        from .services import get_friend_snapshot_queryset
+        friends = get_friend_snapshot_queryset(user)
+        return self.with_related().filter(user__in=friends)
+
+
 class UserPresenceState(TimeStampedModel):
     user = models.OneToOneField(
         settings.AUTH_USER_MODEL,
@@ -140,6 +174,8 @@ class UserPresenceState(TimeStampedModel):
             models.Index(fields=["is_online", "last_seen"]),
         ]
 
+    objects = UserPresenceStateQuerySet.as_manager()
+
     def mark_online(self):
         self.is_online = True
         self.save(update_fields=["is_online", "updated_at"])
@@ -152,3 +188,4 @@ class UserPresenceState(TimeStampedModel):
     def __str__(self):
         state = "online" if self.is_online else "offline"
         return f"{self.user.username} is {state}"
+    
