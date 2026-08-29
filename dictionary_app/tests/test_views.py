@@ -26,7 +26,7 @@ class DictionaryLookupViewTests(SimpleTestCase):
             }
         ]
 
-        response = self.client.get(reverse("dict-lookup", kwargs={"word": "hello"}))
+        response = self.client.get(reverse("dictionary:dict-lookup", kwargs={"word": "hello"}))
 
         self.assertEqual(response.status_code, status.HTTP_200_OK)
         self.assertEqual(response.json()["word"], "hello")
