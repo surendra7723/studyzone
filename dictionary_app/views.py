@@ -26,7 +26,8 @@ class DictionaryLookupView(APIView):
     """Look up a word using the public Free Dictionary API."""
 
     serializer_class = DictionaryResponseSerializer
-    authentication_classes = []
+    # Allow public access, but still attempt authentication so that
+    # authenticated users get their searches recorded in history.
     permission_classes = []
 
     def get(self, request, word):
