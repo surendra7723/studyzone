@@ -13,11 +13,12 @@ class SearchHistory(OwnedModel, models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="search_history",
+        help_text="The user who performed the search.",
     )
-    word = models.CharField(max_length=255, db_index=True)
-    searched_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    word = models.CharField(max_length=255, db_index=True, help_text="The searched word.")
+    searched_at = models.DateTimeField(auto_now_add=True, db_index=True, help_text="When the word was searched.")
     # Store the definition/response for quick re-display
-    definition_data = models.JSONField(default=dict, blank=True)
+    definition_data = models.JSONField(default=dict, blank=True, help_text="Cached definition data from the external API.")
 
     class Meta:
         ordering = ['-searched_at']
@@ -42,22 +43,24 @@ class WordEntry(OwnedModel, models.Model):
         settings.AUTH_USER_MODEL,
         on_delete=models.CASCADE,
         related_name="word_entries",
+        help_text="The owner of this word entry.",
     )
-    word = models.CharField(max_length=255, db_index=True)
+    word = models.CharField(max_length=255, db_index=True, help_text="The word saved by the user.")
     entry_type = models.CharField(
         max_length=10,
         choices=EntryType.choices,
         default=EntryType.NOTE,
         db_index=True,
+        help_text="Whether this entry is a note or a bookmark.",
     )
     # For bookmarks: custom user note
-    custom_note = models.TextField(blank=True, default='')
+    custom_note = models.TextField(blank=True, default='', help_text="Optional personal note, only allowed for bookmarks.")
     # Cache the latest definition for offline access
-    definition_data = models.JSONField(default=dict, blank=True)
+    definition_data = models.JSONField(default=dict, blank=True, help_text="Cached definition data from the external API.")
     # When added to user's collection
-    added_at = models.DateTimeField(auto_now_add=True, db_index=True)
+    added_at = models.DateTimeField(auto_now_add=True, db_index=True, help_text="When the word was added to the user's collection.")
     # Optional: when user last reviewed/practiced this word
-    last_reviewed_at = models.DateTimeField(null=True, blank=True)
+    last_reviewed_at = models.DateTimeField(null=True, blank=True, help_text="When the user last reviewed or practiced this word.")
 
     class Meta:
         ordering = ['-added_at']

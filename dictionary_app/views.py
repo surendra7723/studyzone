@@ -1,6 +1,7 @@
 """Views for the dictionary app."""
 
 from django.utils import timezone
+from drf_spectacular.utils import OpenApiParameter, extend_schema, extend_schema_view
 from rest_framework import status, viewsets
 from rest_framework.decorators import action
 from rest_framework.exceptions import APIException
@@ -22,6 +23,14 @@ from .serializers import (
 from .services import ExternalDictionaryService
 
 
+@extend_schema(
+    summary="Look up a word definition",
+    description=(
+        "Fetch and normalize the external dictionary payload for a word. "
+        "Authenticated users have their search recorded in history."
+    ),
+    tags=["Dictionary"],
+)
 class DictionaryLookupView(APIView):
     """Look up a word using the public Free Dictionary API."""
 
@@ -53,6 +62,31 @@ class DictionaryLookupView(APIView):
         return Response(serializer.data, status=status.HTTP_200_OK)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List search history",
+        description="Returns all search history entries for the authenticated user",
+        tags=["Dictionary - Search History"],
+        parameters=[
+            OpenApiParameter(
+                name="ordering",
+                description="Order by field (prefix with - for descending)",
+                required=False,
+                type=str,
+            ),
+        ],
+    ),
+    retrieve=extend_schema(
+        summary="Get search history entry details",
+        description="Retrieve details of a specific search history entry",
+        tags=["Dictionary - Search History"],
+    ),
+    destroy=extend_schema(
+        summary="Delete a search history entry",
+        description="Delete a single search history entry permanently",
+        tags=["Dictionary - Search History"],
+    ),
+)
 class SearchHistoryViewSet(UserScopedViewSet):
     """ViewSet for managing user's search history."""
 
@@ -63,6 +97,11 @@ class SearchHistoryViewSet(UserScopedViewSet):
     # Read-only by default (history is append-only via lookup)
     http_method_names = ['get', 'head', 'options', 'delete']
 
+    @extend_schema(
+        summary="Clear all search history",
+        description="Delete all search history entries for the current user",
+        tags=["Dictionary - Search History"],
+    )
     @action(detail=False, methods=['delete'], url_path='clear')
     def clear_history(self, request):
         """Clear all search history for the current user."""
@@ -72,6 +111,11 @@ class SearchHistoryViewSet(UserScopedViewSet):
             status=status.HTTP_204_NO_CONTENT
         )
 
+    @extend_schema(
+        summary="Get recent search history",
+        description="Get the last 20 search history entries for the current user",
+        tags=["Dictionary - Search History"],
+    )
     @action(detail=False, methods=['get'], url_path='recent')
     def recent(self, request):
         """Get recent search history (last 20 entries)."""
@@ -80,6 +124,52 @@ class SearchHistoryViewSet(UserScopedViewSet):
         return Response(serializer.data)
 
 
+@extend_schema_view(
+    list=extend_schema(
+        summary="List word entries",
+        description="Returns all word entries (notes and bookmarks) for the authenticated user",
+        tags=["Dictionary - Words"],
+        parameters=[
+            OpenApiParameter(
+                name="entry_type",
+                description="Filter by entry type (note or bookmark)",
+                required=False,
+                type=str,
+            ),
+            OpenApiParameter(
+                name="ordering",
+                description="Order by field (prefix with - for descending)",
+                required=False,
+                type=str,
+            ),
+        ],
+    ),
+    create=extend_schema(
+        summary="Create a word entry",
+        description="Create a new note or bookmark for a word",
+        tags=["Dictionary - Words"],
+    ),
+    retrieve=extend_schema(
+        summary="Get word entry details",
+        description="Retrieve details of a specific word entry",
+        tags=["Dictionary - Words"],
+    ),
+    update=extend_schema(
+        summary="Update a word entry",
+        description="Update all fields of a word entry",
+        tags=["Dictionary - Words"],
+    ),
+    partial_update=extend_schema(
+        summary="Partially update a word entry",
+        description="Update specific fields of a word entry",
+        tags=["Dictionary - Words"],
+    ),
+    destroy=extend_schema(
+        summary="Delete a word entry",
+        description="Delete a word entry permanently",
+        tags=["Dictionary - Words"],
+    ),
+)
 class WordEntryViewSet(UserScopedViewSet):
     """ViewSet for managing user's word entries (notes/bookmarks)."""
 
@@ -107,6 +197,11 @@ class WordEntryViewSet(UserScopedViewSet):
 
         serializer.save(user=self.request.user, definition_data=definition_data)
 
+    @extend_schema(
+        summary="Get all note entries",
+        description="Get all note-type entries for the authenticated user",
+        tags=["Dictionary - Words"],
+    )
     @action(detail=False, methods=['get'], url_path='notes')
     def notes(self, request):
         """Get all note-type entries."""
@@ -118,6 +213,11 @@ class WordEntryViewSet(UserScopedViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Get all bookmark entries",
+        description="Get all bookmark-type entries for the authenticated user",
+        tags=["Dictionary - Words"],
+    )
     @action(detail=False, methods=['get'], url_path='bookmarks')
     def bookmarks(self, request):
         """Get all bookmark-type entries."""
@@ -129,6 +229,11 @@ class WordEntryViewSet(UserScopedViewSet):
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Mark word entry as reviewed",
+        description="Update last_reviewed_at timestamp for a word entry",
+        tags=["Dictionary - Words"],
+    )
     @action(detail=True, methods=['post'], url_path='review')
     def mark_reviewed(self, request, pk=None):
         """Mark a word entry as reviewed (update last_reviewed_at)."""
@@ -138,6 +243,31 @@ class WordEntryViewSet(UserScopedViewSet):
         serializer = self.get_serializer(entry)
         return Response(serializer.data)
 
+    @extend_schema(
+        summary="Bulk toggle entry types",
+        description="Bulk update entry types between note and bookmark",
+        tags=["Dictionary - Words"],
+        request={
+            "application/json": {
+                "schema": {
+                    "type": "object",
+                    "properties": {
+                        "ids": {
+                            "type": "array",
+                            "items": {"type": "integer"},
+                            "description": "List of word entry IDs",
+                        },
+                        "entry_type": {
+                            "type": "string",
+                            "enum": ["note", "bookmark"],
+                            "description": "The new entry type",
+                        },
+                    },
+                    "required": ["ids", "entry_type"],
+                }
+            }
+        },
+    )
     @action(detail=False, methods=['post'], url_path='bulk-toggle')
     def bulk_toggle_type(self, request):
         """Bulk update entry types (note <-> bookmark)."""
