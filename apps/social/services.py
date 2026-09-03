@@ -10,6 +10,8 @@ from django.contrib.auth import get_user_model
 from django.utils import timezone
 
 from .models import FriendRequest, FriendRequestStatus, Friendship, UserPresenceState
+from apps.notifications.models import Notification
+from apps.notifications.services import send_push_to_user
 
 User = get_user_model()
 
@@ -141,6 +143,48 @@ def broadcast_presence_change(user, is_online):
     broadcast_to_friends(user, payload)
 
 
+def _create_notification(recipient, actor, verb, target=None, content=None):
+    return Notification.objects.create(
+        recipient=recipient,
+        actor=actor,
+        verb=verb,
+        target=target or "",
+        content=content or "",
+    )
+
+
+def _notify_friend_request_event(friend_request, verb, content):
+    sender = friend_request.sender
+    receiver = friend_request.receiver
+    _create_notification(
+        recipient=receiver,
+        actor=sender,
+        verb=verb,
+        target=str(friend_request.id),
+        content=content,
+    )
+    _create_notification(
+        recipient=sender,
+        actor=sender,
+        verb=verb,
+        target=str(friend_request.id),
+        content=content,
+    )
+    push_payload = {
+        "event": f"friend.request.{verb.split('.')[-1]}",
+        "friend_request_id": friend_request.id,
+        "sender_id": sender.id,
+        "sender_username": sender.username,
+        "receiver_id": receiver.id,
+        "receiver_username": receiver.username,
+        "status": friend_request.status,
+        "verb": verb,
+        "content": content,
+    }
+    send_push_to_user(receiver, push_payload)
+    send_push_to_user(sender, push_payload)
+
+
 def broadcast_friend_request_event(friend_request, event_name):
     payload = {
         "event": event_name,
@@ -161,16 +205,31 @@ def accept_friend_request(friend_request):
         accepted_request=friend_request,
     )
     broadcast_friend_request_event(friend_request, "friend.request.accepted")
+    _notify_friend_request_event(
+        friend_request,
+        "friend.request.accepted",
+        f"{friend_request.sender.username} accepted your friend request.",
+    )
     return friendship
 
 
 def decline_friend_request(friend_request):
     friend_request.mark_responded(FriendRequestStatus.DECLINED)
     broadcast_friend_request_event(friend_request, "friend.request.declined")
+    _notify_friend_request_event(
+        friend_request,
+        "friend.request.declined",
+        f"{friend_request.sender.username} declined your friend request.",
+    )
     return friend_request
 
 
 def cancel_friend_request(friend_request):
     friend_request.mark_responded(FriendRequestStatus.CANCELLED)
     broadcast_friend_request_event(friend_request, "friend.request.cancelled")
+    _notify_friend_request_event(
+        friend_request,
+        "friend.request.cancelled",
+        f"{friend_request.sender.username} cancelled the friend request.",
+    )
     return friend_request

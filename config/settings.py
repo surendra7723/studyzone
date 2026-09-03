@@ -182,6 +182,10 @@ SOCIAL_PRESENCE_REDIS_URL = os.getenv(
     os.getenv("CELERY_BROKER_URL", "redis://localhost:6379/0"),
 )
 SOCIAL_PRESENCE_TTL_SECONDS = int(os.getenv("SOCIAL_PRESENCE_TTL_SECONDS", "90"))
+
+VAPID_PRIVATE_KEY = os.getenv("VAPID_PRIVATE_KEY", "")
+VAPID_SUBJECT = os.getenv("VAPID_SUBJECT", "mailto:admin@example.com")
+VAPID_AUDIENCE = os.getenv("VAPID_AUDIENCE", "")
 #Toggle (env) or "db" for emailbackend and phonebackend
 
 EMAIL_CONFIG_SOURCE = os.getenv("EMAIL_CONFIG_SOURCE", "env")

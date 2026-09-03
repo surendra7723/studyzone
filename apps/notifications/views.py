@@ -1,6 +1,7 @@
 from rest_framework import permissions, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
+from rest_framework.views import APIView
 from rest_framework.viewsets import ModelViewSet
 from django_filters.rest_framework import DjangoFilterBackend
 
@@ -12,8 +13,8 @@ from drf_spectacular.utils import (
     OpenApiParameter,
 )
 
-from .models import Notification
-from .serializers import NotificationSerializer
+from .models import Notification, PushSubscription
+from .serializers import NotificationSerializer, PushSubscriptionSerializer
 
 
 @extend_schema_view(
@@ -127,3 +128,50 @@ class NotificationViewSet(SoftDeleteMixin, PaginationMixin, UserFilterMixin, Mod
             recipient=request.user, id__in=ids, is_deleted=False
         ).update(read=True)
         return Response({"updated": updated})
+
+
+class PushSubscriptionView(APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    @extend_schema(
+        summary="Subscribe to push notifications",
+        description="Register a browser push subscription for the authenticated user",
+        tags=["Notifications - Push"],
+        request=PushSubscriptionSerializer,
+        responses={status.HTTP_201_CREATED: PushSubscriptionSerializer},
+    )
+    def post(self, request):
+        serializer = PushSubscriptionSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        subscription, _ = PushSubscription.objects.update_or_create(
+            user=request.user,
+            endpoint=serializer.validated_data["endpoint"],
+            defaults={
+                "p256dh": serializer.validated_data["p256dh"],
+                "auth": serializer.validated_data["auth"],
+                "is_active": True,
+            },
+        )
+        return Response(
+            PushSubscriptionSerializer(subscription).data,
+            status=status.HTTP_201_CREATED,
+        )
+
+    @extend_schema(
+        summary="Unsubscribe from push notifications",
+        description="Deactivate a browser push subscription for the authenticated user",
+        tags=["Notifications - Push"],
+        request=PushSubscriptionSerializer,
+        responses={status.HTTP_204_NO_CONTENT: None},
+    )
+    def delete(self, request):
+        endpoint = request.data.get("endpoint")
+        if not endpoint:
+            return Response(
+                {"detail": "Expected 'endpoint' in request body."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        PushSubscription.objects.filter(
+            user=request.user, endpoint=endpoint
+        ).update(is_active=False)
+        return Response(status=status.HTTP_204_NO_CONTENT)
