@@ -19,6 +19,7 @@ from .serializers import (
     PresenceSnapshotSerializer,
 )
 from .services import (
+    _notify_friend_request_event,
     accept_friend_request,
     broadcast_friend_request_event,
     cancel_friend_request,
@@ -62,6 +63,11 @@ class FriendRequestViewSet(viewsets.ModelViewSet):
         """Create friend request and broadcast event."""
         friend_request = serializer.save()
         broadcast_friend_request_event(friend_request, "friend.request.created")
+        _notify_friend_request_event(
+            friend_request,
+            "friend.request.created",
+            f"{friend_request.sender.username} sent you a friend request.",
+        )
 
     @extend_schema(summary="Get incoming friend requests", tags=["Social - Friends"])
     @action(detail=False, methods=['get'])
