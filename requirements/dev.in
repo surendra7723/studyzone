@@ -8,3 +8,9 @@ flake8
 ipdb
 factory_boy
 pipdeptree
+
+# Testing
+pytest
+pytest-django
+pytest-cov
+pytest-asyncio

@@ -88,6 +88,8 @@ click-repl==0.3.0
     # via
     #   -c requirements/base.txt
     #   celery
+coverage==7.16.0
+    # via pytest-cov
 cron-descriptor==1.4.5
     # via
     #   -c requirements/base.txt
@@ -97,6 +99,9 @@ cryptography==50.0.0
     #   -c requirements/base.txt
     #   djfernet
     #   google-auth
+    #   http-ece
+    #   py-vapid
+    #   pywebpush
 decorator==5.3.1
     # via ipdb
 dj-database-url==3.1.2
@@ -172,6 +177,8 @@ google-auth==2.56.3
     # via
     #   -c requirements/base.txt
     #   -r requirements/base.in
+http-ece==1.2.1
+    # via pywebpush
 idna==3.18
     # via
     #   -c requirements/base.txt
@@ -181,6 +188,8 @@ inflection==0.5.1
     # via
     #   -c requirements/base.txt
     #   drf-spectacular
+iniconfig==2.3.0
+    # via pytest
 installer==1.0.1
     # via nab-python
 ipdb==0.13.13
@@ -233,6 +242,7 @@ packaging==26.3
     #   build
     #   kombu
     #   nab-index
+    #   pytest
 parso==0.8.7
     # via jedi
 pathspec==1.1.1
@@ -247,6 +257,10 @@ pipdeptree==4.2.0
     # via -r requirements/dev.in
 platformdirs==4.11.0
     # via black
+pluggy==1.6.0
+    # via
+    #   pytest
+    #   pytest-cov
 prompt-toolkit==3.0.53
     # via
     #   -c requirements/base.txt
@@ -270,6 +284,8 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
+py-vapid==1.9.4
+    # via pywebpush
 pyasn1==0.6.4
     # via
     #   -c requirements/base.txt
@@ -290,6 +306,7 @@ pygments==2.20.0
     # via
     #   ipython
     #   ipython-pygments-lexers
+    #   pytest
 pyjwt==2.13.0
     # via
     #   -c requirements/base.txt
@@ -299,6 +316,18 @@ pyproject-hooks==1.2.0
     # via
     #   build
     #   nab-python
+pytest==9.1.1
+    # via
+    #   -r requirements/dev.in
+    #   pytest-asyncio
+    #   pytest-cov
+    #   pytest-django
+pytest-asyncio==1.4.0
+    # via -r requirements/dev.in
+pytest-cov==7.1.0
+    # via -r requirements/dev.in
+pytest-django==4.14.0
+    # via -r requirements/dev.in
 python-crontab==3.3.0
     # via
     #   -c requirements/base.txt
@@ -309,6 +338,10 @@ python-dateutil==2.9.0.post0
     #   celery
 pytokens==0.4.1
     # via black
+pywebpush==1.14.1
+    # via
+    #   -c requirements/base.txt
+    #   -r requirements/base.in
 pyyaml==6.0.3
     # via
     #   -c requirements/base.txt
@@ -325,6 +358,7 @@ referencing==0.37.0
 requests==2.34.2
     # via
     #   -c requirements/base.txt
+    #   pywebpush
     #   twilio
 rpds-py==2026.6.3
     # via
@@ -335,6 +369,7 @@ six==1.17.0
     # via
     #   -c requirements/base.txt
     #   python-dateutil
+    #   pywebpush
 sqlparse==0.5.5
     # via
     #   -c requirements/base.txt
@@ -365,6 +400,7 @@ typing-extensions==4.16.0
     #   nab-python
     #   nab-resolver
     #   psycopg
+    #   pytest-asyncio
     #   referencing
 tzdata==2026.3
     # via

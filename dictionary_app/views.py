@@ -44,7 +44,8 @@ class DictionaryLookupView(APIView):
         payload = ExternalDictionaryService.fetch_word_data(word)
 
         if not isinstance(payload, list) or not payload:
-            raise APIException("The dictionary service returned an unexpected payload structure.")
+            from rest_framework.exceptions import NotFound
+            raise NotFound("Word not found.")
 
         first_entry = payload[0]
         serializer = DictionaryResponseSerializer(data=first_entry)
