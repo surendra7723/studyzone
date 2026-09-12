@@ -17,6 +17,7 @@ Including another URLconf
 
 from django.contrib import admin
 from django.urls import include, path
+from django.http import JsonResponse
 from rest_framework.routers import DefaultRouter
 from apps.user.serializers import SoftDeleteAwareTokenObtainPairView
 from rest_framework_simplejwt.views import (
@@ -35,6 +36,12 @@ from debug_toolbar.toolbar import debug_toolbar_urls
 from config import settings
 
 
+# Health check endpoint for Docker
+def health_check(request):
+    """Simple health check endpoint for container orchestration."""
+    return JsonResponse({"status": "healthy"}, status=200)
+
+
 router = DefaultRouter()
 router.register(r"api/users", UserViewSet, basename="users")
 router.register(r"api/admin/users", AdminUserViewSet, basename="admin-users")
@@ -44,6 +51,8 @@ router.register(
 
 urlpatterns = [
     path("dj-admin/", admin.site.urls),
+    # Health check endpoint for Docker containers
+    path("api/health/", health_check, name="health-check"),
     path("api/schema/", SpectacularAPIView.as_view(), name="schema"),
     path(
         "api/docs/swagger/",
@@ -77,6 +86,7 @@ urlpatterns = [
     path("api/pomodoro/", include("apps.pomodoro.urls")),
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/server/", include("apps.server.urls")),
+    path("api/leaderboard/", include("apps.leaderboard.urls")),
 ] + debug_toolbar_urls()
 if settings.DEBUG:
     from django.conf.urls.static import static

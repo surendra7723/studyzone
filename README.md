@@ -10,13 +10,36 @@ Django REST API for a collaborative study platform with real-time friends/presen
 - Social auth (Google, Facebook) with account linking
 - Real-time friend requests and presence tracking via WebSocket
 - Pomodoro sessions with task associations and daily/weekly/monthly stats
-- Task and goal management
+- Task, goal, and category management
+- Notifications and push subscriptions
+- Leaderboard, streak tracking, and milestones
+- Ambience track catalog with public access
+- Dictionary search history and saved word entries
 - JWT authentication with token refresh
-- API docs (Swagger + ReDoc)
+- OpenAPI schema + Swagger + ReDoc
+- CORS support for frontend clients
 
 **Tech**: Django 5.2.17, DRF 3.18.0, PostgreSQL, Redis 8.1.0, Celery 5.6.3, Channels 4.3.2, SimpleJWT 5.5.1
 
 **Tests**: `uv run python manage.py test`
+**Integration tests**: `pytest tests/integration/ -v`
+
+### Integration coverage
+
+- Auth and account verification flow
+- Task and pomodoro lifecycle
+- Social requests, friendships, and presence
+- Notifications and push delivery
+- Ambience catalog access
+- Dictionary lookups and user history
+
+### Recent additions
+
+- Leaderboard and streak APIs with ranking, freezes, and milestones
+- Browser push subscription support for notifications
+- Dictionary lookup history and saved notes/bookmarks
+- OpenAPI schema, Swagger, and Redoc docs
+- CORS enabled for frontend integrations
 
 ## Quick Start
 
@@ -153,6 +176,38 @@ POST   /api/social/friend-requests/<pk>/decline/          # Decline request
 POST   /api/social/friend-requests/<pk>/cancel/           # Cancel request
 ```
 
+### Dictionary Endpoints
+```
+GET    /api/dictionary/lookup/<word>/     # Look up a word definition
+GET    /api/dictionary/history/           # User search history
+DELETE /api/dictionary/history/clear/     # Clear history
+GET    /api/dictionary/words/             # User saved notes/bookmarks
+POST   /api/dictionary/words/             # Save a word note/bookmark
+POST   /api/dictionary/words/<id>/review/ # Mark a word entry as reviewed
+```
+
+### Notification Endpoints
+```
+GET    /api/notifications/notifications/      # List notifications
+POST   /api/notifications/notifications/<id>/mark-read/
+POST   /api/notifications/notifications/mark-all-read/
+GET    /api/notifications/notifications/unread-count/
+POST   /api/notifications/push-subscriptions/ # Register browser push subscription
+DELETE /api/notifications/push-subscriptions/ # Remove push subscription
+```
+
+### Leaderboard & Streak Endpoints
+```
+GET    /api/leaderboard/leaderboard/      # Global/weekly/monthly leaderboard
+GET    /api/leaderboard/leaderboard/rank/ # Current user's rank
+GET    /api/leaderboard/leaderboard/nearby/
+GET    /api/leaderboard/streak/           # Current streak info
+POST   /api/leaderboard/streak/freeze/    # Use a streak freeze
+GET    /api/leaderboard/streak/history/   # Streak activity history
+PUT    /api/leaderboard/streak/timezone/  # Update user timezone
+GET    /api/leaderboard/milestones/       # Milestones and progress
+```
+
 ### JWT Endpoints
 ```
 POST   /api/auth/token/           # Get JWT tokens
@@ -163,8 +218,11 @@ POST   /api/auth/token/verify/    # Verify JWT token
 ## Development
 
 ```bash
-# Run tests
+# Run project tests
 uv run python manage.py test
+
+# Run integration tests
+pytest tests/integration/ -v
 
 # Run specific app tests
 uv run python manage.py test apps.social --keepdb

@@ -72,6 +72,20 @@ class WordEntryCreateSerializer(WordEntrySerializer):
     class Meta(WordEntrySerializer.Meta):
         read_only_fields = ['id', 'added_at', 'last_reviewed_at']
 
+    def validate(self, attrs):
+        """Check for duplicate entries and validate custom_note."""
+        user = self.context['request'].user
+        word = attrs.get('word', '').strip().lower()
+        entry_type = attrs.get('entry_type', WordEntry.EntryType.NOTE)
+        
+        if WordEntry.objects.filter(user=user, word=word, entry_type=entry_type).exists():
+            raise serializers.ValidationError({
+                'non_field_errors': ['You already have a word entry for this word and type.']
+            })
+        
+        # Run parent validation (custom_note check)
+        return super().validate(attrs)
+
 
 class WordEntryUpdateSerializer(serializers.ModelSerializer):
     """Serializer for updating word entries (only custom_note and entry_type)."""

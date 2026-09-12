@@ -63,6 +63,7 @@ INSTALLED_APPS = [
     "debug_toolbar",
     'django_celery_beat',
     "dictionary_app",
+    "apps.leaderboard",
 ]
 
 # Make django-extensions use IPython by default in shell_plus.
