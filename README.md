@@ -135,6 +135,28 @@ uv run python manage.py runserver
 API: `http://localhost:8000`  
 Docs: `http://localhost:8000/api/docs/swagger`
 
+## Docker
+
+The project includes a Docker setup for local development and production-like orchestration.
+
+- Services: web, PostgreSQL, Redis, Celery worker, Celery beat
+- Base config: [Dockerfile](Dockerfile), [docker-compose.yml](docker-compose.yml)
+- Production override: [docker-compose.prod.yml](docker-compose.prod.yml)
+- Environment template: [.env.docker.example](.env.docker.example)
+
+```bash
+cp .env.docker.example .env.docker
+docker compose up --build
+```
+
+Production stack:
+
+```bash
+docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+```
+
+Volumes persist PostgreSQL and Redis data, and the app exposes health checks for the web and worker services.
+
 ## API Overview
 
 ### Base URL
