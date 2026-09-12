@@ -9,7 +9,7 @@ This module contains all async tasks for:
 """
 
 import logging
-from datetime import timedelta
+from datetime import timedelta, date
 from typing import List, Dict, Any
 
 import redis
@@ -44,13 +44,13 @@ class TimezoneService:
     """Handles timezone conversions for streak calculations."""
     
     @staticmethod
-    def get_user_local_date(user_streak: UserStreak) -> 'datetime.date':
+    def get_user_local_date(user_streak: UserStreak) -> 'date':
         """Get current date in user's timezone."""
         user_tz = ZoneInfo(user_streak.user_timezone)
         return timezone.now().astimezone(user_tz).date()
     
     @staticmethod
-    def get_previous_day_in_timezone(timezone_str: str) -> 'datetime.date':
+    def get_previous_day_in_timezone(timezone_str: str) -> 'date':
         """Get yesterday's date in the specified timezone."""
         user_tz = ZoneInfo(timezone_str)
         return (timezone.now().astimezone(user_tz) - timedelta(days=1)).date()
