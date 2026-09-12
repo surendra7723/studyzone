@@ -1,0 +1,235 @@
+# ============================================
+# Docker Compose Configuration for StudyZone
+# ============================================
+# Usage:
+#   Development: docker-compose up
+#   Production:  docker-compose -f docker-compose.yml -f docker-compose.prod.yml up -d
+# ============================================
+
+services:
+  # ============================================
+  # Web Application Service
+  # ============================================
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: studyzone-web
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - DEBUG=True
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-dev-key-change-in-production}
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings}
+      - DATABASE_URL=postgres://${POSTGRES_USER:-studyzone}:${POSTGRES_PASSWORD:-studyzone}@db:5432/${POSTGRES_DB:-studyzone}
+      - DB_NAME=${POSTGRES_DB:-studyzone}
+      - DB_USER=${POSTGRES_USER:-studyzone}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-studyzone}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379/1
+      - CHANNEL_REDIS_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379/2
+      - SOCIAL_PRESENCE_REDIS_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379/3
+      - EMAIL_HOST=${EMAIL_HOST:-mailpit}
+      - EMAIL_PORT=${EMAIL_PORT:-1025}
+      - EMAIL_HOST_USER=${EMAIL_HOST_USER:-}
+      - EMAIL_HOST_PASSWORD=${EMAIL_HOST_PASSWORD:-}
+      - EMAIL_USE_TLS=${EMAIL_USE_TLS:-false}
+      - DEFAULT_FROM_EMAIL=${DEFAULT_FROM_EMAIL:-Studyzone <no-reply@studyzone.local>}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      - GOOGLE_CLIENT_ID=${GOOGLE_CLIENT_ID:-}
+      - FACEBOOK_APP_ID=${FACEBOOK_APP_ID:-}
+      - FACEBOOK_APP_SECRET=${FACEBOOK_APP_SECRET:-}
+      - SOCIAL_AUTH_ENABLED=${SOCIAL_AUTH_ENABLED:-true}
+      - EMAIL_VERIFICATION_URL_BASE=${EMAIL_VERIFICATION_URL_BASE:-http://localhost:8000}
+      - VAPID_PRIVATE_KEY=${VAPID_PRIVATE_KEY:-}
+      - MOCK_TWILIO=${MOCK_TWILIO:-true}
+    volumes:
+      - .:/app:rw
+      - static_volume:/app/staticfiles
+      - media_volume:/app/media
+      - log_volume:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - studyzone-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # ============================================
+  # PostgreSQL Database Service
+  # ============================================
+  db:
+    image: postgres:16-alpine
+    container_name: studyzone-db
+    restart: unless-stopped
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB:-studyzone}
+      - POSTGRES_USER=${POSTGRES_USER:-studyzone}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD:-studyzone}
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --locale=en_US.UTF-8
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./docker/init-db.sql:/docker-entrypoint-initdb.d/init-db.sql:ro
+    ports:
+      - "${DB_EXTERNAL_PORT:-5432}:5432"
+    networks:
+      - studyzone-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-studyzone} -d ${POSTGRES_DB:-studyzone}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    shm_size: 256mb
+
+  # ============================================
+  # Redis Service
+  # ============================================
+  redis:
+    image: redis:8.1.0-alpine
+    container_name: studyzone-redis
+    restart: unless-stopped
+    command: >
+      sh -c "redis-server --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-redispassword}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-redispassword}
+    volumes:
+      - redis_data:/data
+    ports:
+      - "${REDIS_EXTERNAL_PORT:-6379}:6379"
+    networks:
+      - studyzone-network
+    healthcheck:
+      test: ["CMD", "sh", "-c", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+
+  # ============================================
+  # Celery Worker Service
+  # ============================================
+  celery-worker:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: studyzone-celery-worker
+    restart: unless-stopped
+    command: celery -A config worker -l info --concurrency=2
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-dev-key-change-in-production}
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings}
+      - DB_NAME=${POSTGRES_DB:-studyzone}
+      - DB_USER=${POSTGRES_USER:-studyzone}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-studyzone}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379/1
+      - CHANNEL_REDIS_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379/2
+      - SOCIAL_PRESENCE_REDIS_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379/3
+    volumes:
+      - .:/app:ro
+      - log_volume:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - studyzone-network
+    healthcheck:
+      test: ["CMD-SHELL", "celery -A config inspect ping -d celery@$${HOSTNAME}"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+  # ============================================
+  # Celery Beat Scheduler Service
+  # ============================================
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: studyzone-celery-beat
+    restart: unless-stopped
+    command: celery -A config beat -l info --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    environment:
+      - DEBUG=False
+      - SECRET_KEY=${SECRET_KEY:-django-insecure-dev-key-change-in-production}
+      - DJANGO_SETTINGS_MODULE=${DJANGO_SETTINGS_MODULE:-config.settings}
+      - DB_NAME=${POSTGRES_DB:-studyzone}
+      - DB_USER=${POSTGRES_USER:-studyzone}
+      - DB_PASSWORD=${POSTGRES_PASSWORD:-studyzone}
+      - DB_HOST=db
+      - DB_PORT=5432
+      - CELERY_BROKER_URL=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379/0
+      - CELERY_RESULT_BACKEND=redis://:${REDIS_PASSWORD:-redispassword}@redis:6379/1
+    volumes:
+      - .:/app:ro
+      - log_volume:/app/logs
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      celery-worker:
+        condition: service_healthy
+    networks:
+      - studyzone-network
+    healthcheck:
+      test: ["CMD", "pgrep", "-f", "celery.*beat"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+
+# ============================================
+# Named Volumes
+# ============================================
+volumes:
+  postgres_data:
+    driver: local
+    name: studyzone_postgres_data
+  redis_data:
+    driver: local
+    name: studyzone_redis_data
+  static_volume:
+    driver: local
+    name: studyzone_static_volume
+  media_volume:
+    driver: local
+    name: studyzone_media_volume
+  log_volume:
+    driver: local
+    name: studyzone_log_volume
+
+# ============================================
+# Networks
+# ============================================
+networks:
+  studyzone-network:
+    driver: bridge
+    name: studyzone_network
+    ipam:
+      driver: default
+      config:
+        - subnet: 172.28.0.0/16
