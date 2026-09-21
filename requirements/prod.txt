@@ -16,24 +16,35 @@ asgiref==3.12.1
     # via
     #   channels
     #   channels-redis
+    #   daphne
     #   django
+    #   django-cors-headers
 attrs==26.1.0
     # via
     #   aiohttp
     #   jsonschema
     #   referencing
+    #   twisted
+autobahn==26.7.1
+    # via daphne
+automat==25.4.16
+    # via twisted
 billiard==4.2.4
     # via celery
+cbor2==6.1.4
+    # via autobahn
 celery==5.6.3
     # via django-celery-beat
 certifi==2026.7.22
     # via requests
 cffi==2.1.1
-    # via cryptography
+    # via
+    #   autobahn
+    #   cryptography
 channels==4.3.2
     # via channels-redis
 channels-redis==4.3.0
-    # via -r requirements/prod.in
+    # via -r requirements/base.in
 charset-normalizer==3.4.9
     # via requests
 click==8.4.2
@@ -48,29 +59,40 @@ click-plugins==1.1.1.2
     # via celery
 click-repl==0.3.0
     # via celery
+constantly==23.10.4
+    # via twisted
 cron-descriptor==1.4.5
     # via django-celery-beat
 cryptography==50.0.0
     # via
+    #   autobahn
     #   djfernet
     #   google-auth
-dj-database-url==3.1.2
+    #   http-ece
+    #   py-vapid
+    #   pywebpush
+daphne==1.0.0
     # via -r requirements/prod.in
+dj-database-url==3.1.2
+    # via -r requirements/base.in
 django==5.2.17
     # via
-    #   -r requirements/prod.in
+    #   -r requirements/base.in
     #   channels
     #   dj-database-url
     #   django-celery-beat
+    #   django-cors-headers
     #   django-filter
     #   django-timezone-field
     #   djangorestframework
     #   djangorestframework-simplejwt
     #   drf-spectacular
 django-celery-beat==2.9.0
-    # via -r requirements/prod.in
+    # via -r requirements/base.in
+django-cors-headers==4.6.0
+    # via -r requirements/base.in
 django-filter==25.1
-    # via -r requirements/prod.in
+    # via -r requirements/base.in
 django-timezone-field==7.2.2
     # via django-celery-beat
 djangorestframework==3.18.0
@@ -78,21 +100,32 @@ djangorestframework==3.18.0
     #   djangorestframework-simplejwt
     #   drf-spectacular
 djangorestframework-simplejwt==5.5.1
-    # via -r requirements/prod.in
+    # via -r requirements/base.in
 djfernet==0.8.1
-    # via -r requirements/prod.in
+    # via -r requirements/base.in
 drf-spectacular==0.27.0
-    # via -r requirements/prod.in
+    # via -r requirements/base.in
 frozenlist==1.8.0
     # via
     #   aiohttp
     #   aiosignal
 google-auth==2.56.3
+    # via -r requirements/base.in
+gunicorn==21.2.0
     # via -r requirements/prod.in
+http-ece==1.2.1
+    # via pywebpush
+hyperlink==21.0.0
+    # via
+    #   autobahn
+    #   twisted
 idna==3.18
     # via
+    #   hyperlink
     #   requests
     #   yarl
+incremental==24.11.0
+    # via twisted
 inflection==0.5.1
     # via drf-spectacular
 jsonschema==4.26.0
@@ -102,15 +135,20 @@ jsonschema-specifications==2025.9.1
 kombu==5.6.2
     # via celery
 msgpack==1.2.1
-    # via channels-redis
+    # via
+    #   autobahn
+    #   channels-redis
 multidict==6.7.1
     # via
     #   aiohttp
     #   yarl
 packaging==26.3
-    # via kombu
+    # via
+    #   gunicorn
+    #   incremental
+    #   kombu
 pillow==12.0.0
-    # via -r requirements/prod.in
+    # via -r requirements/base.in
 prompt-toolkit==3.0.53
     # via click-repl
 propcache==0.5.2
@@ -118,9 +156,11 @@ propcache==0.5.2
     #   aiohttp
     #   yarl
 psutil==7.2.2
-    # via -r requirements/prod.in
+    # via -r requirements/base.in
 psycopg==3.3.3
-    # via -r requirements/prod.in
+    # via -r requirements/base.in
+py-vapid==1.9.4
+    # via pywebpush
 pyasn1==0.6.4
     # via pyasn1-modules
 pyasn1-modules==0.4.2
@@ -135,6 +175,8 @@ python-crontab==3.3.0
     # via django-celery-beat
 python-dateutil==2.9.0.post0
     # via celery
+pywebpush==1.14.1
+    # via -r requirements/base.in
 pyyaml==6.0.3
     # via drf-spectacular
 redis==8.1.0
@@ -144,29 +186,40 @@ referencing==0.37.0
     #   jsonschema
     #   jsonschema-specifications
 requests==2.34.2
-    # via twilio
+    # via
+    #   pywebpush
+    #   twilio
 rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
 six==1.17.0
-    # via python-dateutil
+    # via
+    #   python-dateutil
+    #   pywebpush
 sqlparse==0.5.5
     # via django
 twilio==9.10.9
-    # via -r requirements/prod.in
+    # via -r requirements/base.in
+twisted==26.4.0
+    # via daphne
+txaio==26.6.1
+    # via autobahn
 typing-extensions==4.16.0
     # via
     #   aiohttp
     #   aiosignal
     #   psycopg
     #   referencing
+    #   twisted
 tzdata==2026.3
     # via
     #   django-celery-beat
     #   kombu
 tzlocal==5.4.4
     # via celery
+ujson==6.0.0
+    # via autobahn
 uritemplate==4.2.0
     # via drf-spectacular
 urllib3==2.7.0
@@ -180,3 +233,5 @@ wcwidth==0.8.2
     # via prompt-toolkit
 yarl==1.24.5
     # via aiohttp
+zope-interface==8.6
+    # via twisted
