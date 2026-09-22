@@ -31,8 +31,6 @@ from drf_spectacular.views import (
 )
 
 from apps.user.views import AdminUserViewSet, UserViewSet, UserProfileViewSet
-from debug_toolbar.toolbar import debug_toolbar_urls
-
 from config import settings
 
 
@@ -87,8 +85,10 @@ urlpatterns = [
     path("api/notifications/", include("apps.notifications.urls")),
     path("api/server/", include("apps.server.urls")),
     path("api/leaderboard/", include("apps.leaderboard.urls")),
-] + debug_toolbar_urls()
+]
 if settings.DEBUG:
+    from debug_toolbar.toolbar import debug_toolbar_urls
+
     from django.conf.urls.static import static
 
     urlpatterns += static(

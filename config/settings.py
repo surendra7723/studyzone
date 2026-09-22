@@ -67,7 +67,6 @@ INSTALLED_APPS = [
     "rest_framework_simplejwt",
     "drf_spectacular",
     "django_filters",
-    "django_extensions",
     "core.apps.CoreConfig",
     "apps.user.apps.UserConfig",
     "apps.social.apps.SocialConfig",
@@ -76,11 +75,16 @@ INSTALLED_APPS = [
     "apps.pomodoro.apps.PomodoroConfig",
     "apps.ambience.apps.AmbienceConfig",
     "apps.notifications.apps.NotificationsConfig",
-    "debug_toolbar",
     'django_celery_beat',
     "dictionary_app",
     "apps.leaderboard",
 ]
+
+if DEBUG:
+    INSTALLED_APPS += [
+        "django_extensions",
+        "debug_toolbar",
+    ]
 
 # Make django-extensions use IPython by default in shell_plus.
 SHELL_PLUS = "ipython"
@@ -94,8 +98,10 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
 ]
+
+if DEBUG:
+    MIDDLEWARE += ["debug_toolbar.middleware.DebugToolbarMiddleware"]
 
 ROOT_URLCONF = "config.urls"
 
