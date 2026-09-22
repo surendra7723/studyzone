@@ -13,3 +13,4 @@ google-auth==2.56.3
 django-filter==25.1
 django-cors-headers==4.6.0
 pywebpush==1.14.1
+flake8==7.3.0

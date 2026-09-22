@@ -97,6 +97,9 @@ cryptography==50.0.0
     #   -c requirements/base.txt
     #   djfernet
     #   google-auth
+    #   http-ece
+    #   py-vapid
+    #   pywebpush
 decorator==5.3.1
     # via ipdb
 dj-database-url==3.1.2
@@ -172,6 +175,10 @@ google-auth==2.56.3
     # via
     #   -c requirements/base.txt
     #   -r requirements/base.in
+http-ece==1.2.1
+    # via
+    #   -c requirements/base.txt
+    #   pywebpush
 idna==3.18
     # via
     #   -c requirements/base.txt
@@ -270,6 +277,10 @@ ptyprocess==0.7.0
     # via pexpect
 pure-eval==0.2.3
     # via stack-data
+py-vapid==1.9.4
+    # via
+    #   -c requirements/base.txt
+    #   pywebpush
 pyasn1==0.6.4
     # via
     #   -c requirements/base.txt
@@ -309,6 +320,10 @@ python-dateutil==2.9.0.post0
     #   celery
 pytokens==0.4.1
     # via black
+pywebpush==1.14.1
+    # via
+    #   -c requirements/base.txt
+    #   -r requirements/base.in
 pyyaml==6.0.3
     # via
     #   -c requirements/base.txt
@@ -325,6 +340,7 @@ referencing==0.37.0
 requests==2.34.2
     # via
     #   -c requirements/base.txt
+    #   pywebpush
     #   twilio
 rpds-py==2026.6.3
     # via
@@ -335,6 +351,7 @@ six==1.17.0
     # via
     #   -c requirements/base.txt
     #   python-dateutil
+    #   pywebpush
 sqlparse==0.5.5
     # via
     #   -c requirements/base.txt
