@@ -2,6 +2,8 @@
 
 from datetime import timedelta
 from unittest.mock import patch, MagicMock
+from zoneinfo import ZoneInfo
+
 from django.test import TestCase, override_settings
 from django.contrib.auth import get_user_model
 from django.utils import timezone
@@ -42,7 +44,8 @@ class TimezoneServiceTests(TestCase):
         from apps.leaderboard.tasks import TimezoneService
         user_tz = "America/New_York"
         prev_day = TimezoneService.get_previous_day_in_timezone(user_tz)
-        self.assertEqual(prev_day, timezone.now().date() - timedelta(days=1))
+        expected_day = timezone.now().astimezone(ZoneInfo(user_tz)).date() - timedelta(days=1)
+        self.assertEqual(prev_day, expected_day)
 
 
 @override_settings(CHANNEL_LAYERS={"default": {"BACKEND": "channels.layers.InMemoryChannelLayer"}})
