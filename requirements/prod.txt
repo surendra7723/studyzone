@@ -24,6 +24,7 @@ attrs==26.1.0
     #   aiohttp
     #   jsonschema
     #   referencing
+    #   service-identity
     #   twisted
 autobahn==26.7.1
     # via daphne
@@ -70,8 +71,10 @@ cryptography==50.0.0
     #   google-auth
     #   http-ece
     #   py-vapid
+    #   pyopenssl
     #   pywebpush
-daphne==1.0.0
+    #   service-identity
+daphne==4.2.1
     # via -r requirements/prod.in
 dj-database-url==3.1.2
     # via -r requirements/base.in
@@ -125,6 +128,7 @@ idna==3.18
     # via
     #   hyperlink
     #   requests
+    #   twisted
     #   yarl
 incremental==24.11.0
     # via twisted
@@ -179,6 +183,8 @@ pyjwt==2.13.0
     # via
     #   djangorestframework-simplejwt
     #   twilio
+pyopenssl==26.4.0
+    # via twisted
 python-crontab==3.3.0
     # via django-celery-beat
 python-dateutil==2.9.0.post0
@@ -201,6 +207,8 @@ rpds-py==2026.6.3
     # via
     #   jsonschema
     #   referencing
+service-identity==26.1.0
+    # via twisted
 six==1.17.0
     # via
     #   python-dateutil
@@ -218,6 +226,7 @@ typing-extensions==4.16.0
     #   aiohttp
     #   aiosignal
     #   psycopg
+    #   pyopenssl
     #   referencing
     #   twisted
 tzdata==2026.3
