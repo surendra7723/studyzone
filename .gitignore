@@ -3,6 +3,7 @@ venv/
 
 .dbsqlite
 __pycache__/
+staticfiles/
 *.pyc
 .env
 .idea/
