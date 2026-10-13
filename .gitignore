@@ -1,5 +1,6 @@
 venv/
 .venv/
+bin/
 
 .dbsqlite
 __pycache__/
@@ -14,3 +15,6 @@ notes/
 backups/
 *.kilo
 *.ai
+
+# uv cache (do not commit cache)
+.cache/

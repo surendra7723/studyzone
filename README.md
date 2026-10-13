@@ -64,9 +64,9 @@ cd studyzone
     uv venv
     ```
 
-3. Install dependencies
+3. Install dependencies from the lockfile
     ```bash
-    uv pip install -r requirements.txt
+    uv sync --group dev
     ```
 
 4. Set up environment variables
@@ -111,7 +111,7 @@ cd studyzone
 # Clone and setup
 git clone <repo-url> && cd studyzone
 uv venv
-uv pip install -r requirements.txt
+uv sync --group dev
 
 # Database and migrations
 uv run python manage.py migrate
@@ -133,7 +133,10 @@ uv run python manage.py runserver
 ```
 
 API: `http://localhost:8000`  
-Docs: `http://localhost:8000/api/docs/swagger`
+Docs: `http://localhost:8000/api/docs/swagger/`
+
+For a production environment, install only runtime dependencies with `uv sync --no-dev`.
+Keep `pyproject.toml` and `uv.lock` together: after changing dependencies, run `uv lock`, review the lockfile diff, and use `uv sync --frozen` in CI or other reproducible environments.
 
 ## Docker
 
@@ -240,6 +243,9 @@ POST   /api/auth/token/verify/    # Verify JWT token
 ## Development
 
 ```bash
+# Install or refresh the locked development environment
+uv sync --group dev
+
 # Run project tests
 uv run python manage.py test
 
@@ -277,10 +283,9 @@ studyzone/
 │   ├── dictionary_app/              # Dictionary/vocabulary
 │   ├── ambience/                    # Ambience audio tracks
 │   └── core/                        # Core utilities
-├── requirements/
-│   ├── base.txt                     # Base dependencies
-│   ├── dev.txt                      # Development dependencies
-│   └── prod.txt                     # Production dependencies
+├── pyproject.toml                   # Project and dependency declarations
+├── uv.lock                          # Reproducible dependency lockfile
+├── docs/                            # Project guides and operational notes
 ├── media/                           # User-uploaded files
 ├── manage.py                        # Django management CLI
 └── README.md                        # This file

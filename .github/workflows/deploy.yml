@@ -5,11 +5,14 @@ on:
     branches: [ "main" ]
   pull_request:
     branches: [ "main" ]
+  schedule:
+    # Nightly dependency upgrade review (deps-upgrade job)
+    - cron: '0 6 * * *'
 
 jobs:
   test-and-lint:
     runs-on: ubuntu-latest
- 
+
     services:
       postgres:
         image: postgres:15
@@ -26,15 +29,35 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@v4
+        uses: astral-sh/setup-uv@v6
         with:
-          python-version: '3.12'
+          version: '0.11.13'
+          python-version: '3.12.11'
+          enable-cache: true
+          cache-dependency-path: uv.lock
 
-      - name: Create venv
-        run: uv venv
+      - name: Verify lockfile freshness
+        run: uv lock --check
 
-      - name: Install Dependencies
-        run: uv pip install -r requirements/prod.txt
+      - name: Security audit (OSV scan of lockfile)
+        run: uv audit
+
+      - name: Install dependencies (from lockfile)
+        run: uv sync --frozen --group dev
+
+      - name: Verify offline install (air-gapped capability)
+        run: uv sync --frozen --group dev --offline
+
+      - name: Performance benchmark
+        if: always()
+        run: |
+          curl -sSfL https://github.com/sharkdp/hyperfine/releases/download/v1.20.0/hyperfine-v1.20.0-x86_64-unknown-linux-musl.tar.gz -o /tmp/hf.tar.gz
+          tar -xzf /tmp/hf.tar.gz -C /tmp
+          /tmp/hyperfine-v1.20.0-x86_64-unknown-linux-musl/hyperfine \
+            --warmup 2 --runs 5 \
+            --export-json benchmark.json \
+            'uv lock --check' \
+            'uv sync --frozen --group dev'
 
       - name: Code Quality (Linting with Flake8)
         env:
@@ -69,38 +92,131 @@ jobs:
         run: |
           uv run python manage.py test --keepdb
 
-  # deploy:
-  #   needs: test-and-lint # Runs only if the linting and testing steps pass perfectly
-  #   runs-on: ubuntu-latest
-  #   if: github.ref == 'refs/heads/main' && github.event_name == 'push' # Only deploy on commits to main
+      - name: Dependency snapshot
+        if: always()
+        run: |
+          uv pip list --format=json > dependency-snapshot.json
+          uv export --format requirements-txt --no-dev > dependency-snapshot.txt
+      - name: Upload dependency snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: dependency-snapshot
+          path: |
+            dependency-snapshot.json
+            dependency-snapshot.txt
+            benchmark.json
+            sbom.json
 
-  #   steps:
-  #     - name: Set up uv
-  #       uses: astral-sh/setup-uv@v4
-  #       with:
-  #         python-version: '3.12'
+      - name: Build production image
+        if: always()
+        run: docker build --tag studyzone:${{ github.sha }} --target production .
 
-  #     - name: Create venv
-  #       run: uv venv
+      - name: Container image scan
+        if: always()
+        run: |
+          # SBOM generation (syft) + grype hard gate on HIGH/CRITICAL.
+          # Installs tools via curl; fails the build on any unfixed HIGH/CRITICAL finding.
+          curl -sSfL https://github.com/anchore/syft/releases/download/v1.20.0/syft_1.20.0_linux_amd64.tar.gz -o /tmp/syft.tgz
+          tar -xzf /tmp/syft.tgz -C /tmp syft
+          /tmp/syft studyzone:${{ github.sha }} -o json > sbom.json
+          curl -sSfL https://github.com/anchore/grype/releases/download/v0.91.0/grype_0.91.0_linux_amd64.tar.gz -o /tmp/grype.tgz
+          tar -xzf /tmp/grype.tgz -C /tmp grype
+          /tmp/grype studyzone:${{ github.sha }} --only-fixed --fail-on high
 
-  #     - name: Install Dependencies
-  #       run: uv pip install -r requirements/dev.txt
+  # Validates that the locked dependency set resolves and installs cleanly
+  # across the supported Python 3.12 patch range (marker compatibility).
+  # Requires the lockfile to be resolvable for each patch version.
+  test-matrix:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ['3.12.11', '3.12.13']
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-  #     # Example option A: Automated Deploying via SSH directly to a VPS
-  #     - name: Deploy to Ubuntu Server via SSH
-  #       uses: appleboy/ssh-action@v1.0.3
-  #       with:
-  #         host: ${{ secrets.SERVER_HOST }}
-  #         username: ${{ secrets.SERVER_USER }}
-  #         key: ${{ secrets.SERVER_SSH_KEY }}
-  #         script: |
-  #           cd /var/www/my-django-app
-  #           git pull origin main
-  #           uv run python manage.py migrate
-  #           uv run python manage.py collectstatic --noinput
-  #           sudo systemctl restart gunicorn
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.13'
+          python-version: ${{ matrix.python-version }}
+          enable-cache: true
+          cache-dependency-path: uv.lock
 
-      # Example option B: Deploying directly to a Cloud Web Service Hook (uncomment if using Render)
+      - name: Install dependencies (from lockfile)
+        run: uv sync --frozen --group dev
+
+      - name: Verify core imports
+        run: |
+          uv run python -c "import django, rest_framework, channels_redis, psycopg, gunicorn, daphne, whitenoise; print('OK on ${{ matrix.python-version }}')"
+
+  # Nightly dependency upgrade bot. Renovate/Dependabot understand uv.lock;
+  # this job re-locks against current releases so a human can review the diff.
+  deps-upgrade:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'schedule'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.13'
+          python-version: '3.12.11'
+          enable-cache: true
+          cache-dependency-path: uv.lock
+
+      - name: Re-lock with latest allowed versions
+        run: |
+          uv lock --upgrade
+          uv audit
+
+      - name: Upload updated lockfile
+        uses: actions/upload-artifact@v4
+        with:
+          name: uv-lock-upgrade
+          path: uv.lock
+
+  # Deploy gate: runs only on main after tests and lint pass. Replace the
+  # commented example with your real deployment target (SSH or webhook).
+  deploy:
+    needs: test-and-lint
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          version: '0.11.13'
+          python-version: '3.12.11'
+          enable-cache: true
+          cache-dependency-path: uv.lock
+
+      - name: Install dependencies (from lockfile)
+        run: uv sync --frozen --group dev
+
+      # Example option A: Automated Deploying via SSH directly to a VPS
+      # - name: Deploy to Ubuntu Server via SSH
+      #   uses: appleboy/ssh-action@v1.0.3
+      #   with:
+      #     host: ${{ secrets.SERVER_HOST }}
+      #     username: ${{ secrets.SERVER_USER }}
+      #     key: ${{ secrets.SERVER_SSH_KEY }}
+      #     script: |
+      #       cd /var/www/my-django-app
+      #       git pull origin main
+      #       uv sync --frozen --group dev
+      #       uv run python manage.py migrate
+      #       uv run python manage.py collectstatic --noinput
+      #       sudo systemctl restart gunicorn
+
+      # Example option B: Deploy directly to a Cloud Web Service Hook (Render)
       # - name: Trigger Render Deploy Hook
       #   run: |
-      #     curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
+      #     curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK }}"

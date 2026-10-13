@@ -6,8 +6,13 @@
 
 services:
   web:
+    # Image is tagged by git SHA by CI. Never deploy a floating tag in
+    # production; pull_policy is explicit so Compose will not silently
+    # rebuild from a mutated working tree.
+    image: studyzone:${GIT_SHA:?GIT_SHA is required in production}
     build:
       target: production
+    pull_policy: always
     restart: always
     environment:
       - DEBUG=False

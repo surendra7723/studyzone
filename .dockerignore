@@ -95,6 +95,3 @@ temp/
 # AI/development notes
 .ai/
 notes/
-
-# Requirements are handled via COPY for specific files
-requirements/*.in

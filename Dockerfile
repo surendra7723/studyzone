@@ -21,15 +21,19 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 # Install uv for fast package management
-COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
+# Pinned by digest (tag can be moved by upstream; digest is immutable)
+COPY --from=ghcr.io/astral-sh/uv:0.11.13@sha256:841c8e6fe30a8b07b4478d12d0c608cba6de66102d29d65d1cc423af86051563 /uv /usr/local/bin/uv
 
 WORKDIR /app
 
-# Copy requirements files first for better layer caching
-COPY requirements/base.txt requirements/prod.txt ./requirements/
-
-# Install Python dependencies using uv
-RUN uv pip install --system -r requirements/prod.txt
+# Copy dependency manifests first for layer caching.
+# Export the lockfile as hashed requirements and install into the system
+# Python. --require-hashes enforces tamper detection on every artifact.
+# On BuildKit hosts, enable the uv cache mount for faster rebuilds:
+#   docker buildx build --buildkit .
+COPY pyproject.toml uv.lock ./
+RUN uv export --no-dev --format requirements-txt --output-file /tmp/requirements.txt && \
+    uv pip install --system --require-hashes --no-cache -r /tmp/requirements.txt
 
 # ============================================
 # Stage 2: Production image
@@ -87,9 +91,13 @@ FROM production AS development
 
 USER root
 
-# Install development dependencies
-COPY requirements/dev.txt ./requirements/
-RUN uv pip install --system -r requirements/dev.txt
+# Install development dependencies from the same lockfile (dev group),
+# overlaying the dev site-packages on top of the production set so the
+# dev stage runs the full dependency set. On BuildKit hosts, enable the uv
+# cache mount for faster rebuilds: docker buildx build --buildkit .
+COPY pyproject.toml uv.lock ./
+RUN uv export --dev --group dev --format requirements-txt --output-file /tmp/requirements-dev.txt && \
+    uv pip install --system --require-hashes --no-cache -r /tmp/requirements-dev.txt
 
 USER studyzone
 

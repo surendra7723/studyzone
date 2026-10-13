@@ -1,7 +1,56 @@
 [project]
 name = "studyzone"
 version = "0.1.0"
-description = "Add your description here"
+description = "StudyZone backend"
 readme = "README.md"
-requires-python = ">=3.12"
-dependencies = []
+requires-python = ">=3.12,<3.13"
+dependencies = [
+    "Django==5.2.17",
+    "channels_redis==4.3.0",
+    "psycopg==3.3.3",
+    "dj-database-url==3.1.2",
+    "django-celery-beat==2.9.0",
+    "djangorestframework_simplejwt==5.5.1",
+    "drf-spectacular==0.27.0",
+    "djfernet==0.8.1",
+    "twilio==9.10.9",
+    "pillow>=12.3.0",
+    "psutil==7.2.2",
+    "google-auth==2.56.3",
+    "django-filter==25.1",
+    "django-cors-headers==4.6.0",
+    "whitenoise==6.9.0",
+    "pywebpush==1.14.1",
+    "gunicorn>=22.0.0",
+    "daphne>=4.2.2",
+]
+
+[dependency-groups]
+dev = [
+    "django-debug-toolbar",
+    "django-extensions",
+    "black",
+    "flake8==7.3.0",
+    "ipdb",
+    "factory_boy",
+    "pipdeptree",
+]
+
+[tool.uv]
+exclude-newer = "2026-10-13"
+
+# Explicitly pin the package index so dependency resolution cannot be
+# redirected by ambient environment variables (e.g. PIP_INDEX_URL) or a
+# locally configured default index. To migrate to an internal mirror, add
+# it here and point `default = true` at the mirror instead:
+#
+#   [[tool.uv.index]]
+#   name = "internal"
+#   url = "https://pypi.internal.example.com/simple"
+#   default = true
+#   # Never hardcode credentials. uv reads UV_INDEX_INTERNAL_USERNAME /
+#   # UV_INDEX_INTERNAL_PASSWORD from the environment (or .netrc).
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+default = true

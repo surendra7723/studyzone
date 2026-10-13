@@ -1,4 +1,0 @@
--r base.in
-
-gunicorn==21.2.0
-daphne==4.2.1
