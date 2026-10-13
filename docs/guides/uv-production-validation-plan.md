@@ -1,6 +1,6 @@
 # uv Production Validation Plan & Checklist — StudyZone
 
-**Scope:** Reliable, reproducible, secure use of uv (v0.11.13) across local dev, CI (`deploy.yml`), and containerized deployment (`Dockerfile`, `docker-compose.prod.yml`).
+**Scope:** Reliable, reproducible, secure use of uv (v0.11.33) across local dev, CI (`deploy.yml`), and containerized deployment (`Dockerfile`, `docker-compose.prod.yml`).
 
 **Current-state summary (audit baseline):**
 
@@ -10,9 +10,9 @@
 | F2 | `uv.lock` contained only the root package | **RESOLVED** — real lockfile with 129 packages; `uv lock --check` enforced in CI |
 | F3 | `requirements/*.txt` contained **no hashes** | **RESOLVED** — uv verifies per-package hashes recorded in `uv.lock` on every `uv sync` |
 | F4 | `requirements/base.in` included `flake8` → shipped into prod | **RESOLVED** — moved to `[dependency-groups].dev`; `uv export --no-dev` confirms exclusion |
-| F5 | `Dockerfile` copied `ghcr.io/astral-sh/uv:latest` | **RESOLVED** — digest-pinned `0.11.13@sha256:841c8e6f...` |
+| F5 | `Dockerfile` copied `ghcr.io/astral-sh/uv:latest` | **RESOLVED** — digest-pinned `0.11.33@sha256:77280f2f...` (kept current: the uv binary is copied into the production image, so grype flags CVEs in its vendored Rust crates — e.g. `quinn-proto` High) |
 | F6 | `.python-version` = `3.12` (no patch pin); `requires-python = ">=3.12"` | **RESOLVED** — `3.12.11`; `">=3.12,<3.13"` |
-| F7 | CI had no `uv lock --check` gate and no pinned uv version | **RESOLVED** — `setup-uv@v6` + `version: '0.11.13'` + `uv lock --check` step |
+| F7 | CI had no `uv lock --check` gate and no pinned uv version | **RESOLVED** — `setup-uv@v6` + `version: '0.11.33'` + `uv lock --check` step |
 
 **Implemented:** Phase 0 (pinning) + Phase 1 & 2 (Track A migration). See git diff for `pyproject.toml`, `uv.lock`, `Dockerfile`, `.github/workflows/deploy.yml`, `.dockerignore`, `.gitignore`.
 
@@ -20,7 +20,7 @@
 
 ## Phase 0 — Toolchain pinning (prerequisite)
 
-- [ ] Pin uv version everywhere: CI (`astral-sh/setup-uv` `version: "0.11.13"`), Dockerfile (`ghcr.io/astral-sh/uv:0.11.13` or digest-pinned `@sha256:...`), dev machines (`uv self update` policy / `UV_UNMANAGED` note).
+- [ ] Pin uv version everywhere: CI (`astral-sh/setup-uv` `version: "0.11.33"`), Dockerfile (`ghcr.io/astral-sh/uv:0.11.33` or digest-pinned `@sha256:...`), dev machines (`uv self update` policy / `UV_UNMANAGED` note).
 - [ ] Pin Python fully: `.python-version` → `3.12.11` (or chosen patch); keep `requires-python = ">=3.12,<3.13"` in `pyproject.toml`.
 - [ ] Verify: `uv python pin 3.12.11 && uv lock` → lockfile `requires-python` narrows accordingly.
 
@@ -83,7 +83,7 @@ hyperfine --runs 5 'uv lock --check'
 - [x] Alert/regression rule: if warm sync p95 exceeds 15 s threshold 2 runs in a row, investigate (new heavy dep, lost cache, network egress). Current p95 is ~32 ms — 2 orders of magnitude below threshold.
 - [x] **Pass criteria:** all metrics within thresholds; benchmark log archived as CI artifact (add `hyperfine --export-json` step to `deploy.yml`).
 
-**Benchmark methodology:** hyperfine 1.20.0, `--warmup 1 --runs 3` (cold) / `--warmup 2 --runs 5` (warm), Linux x86_64, uv 0.11.13, CPython 3.12.11, 129 packages. Re-run quarterly or on any dependency change.
+**Benchmark methodology:** hyperfine 1.20.0, `--warmup 1 --runs 3` (cold) / `--warmup 2 --runs 5` (warm), Linux x86_64, uv 0.11.33, CPython 3.12.11, 129 packages. Re-run quarterly or on any dependency change.
 
 ## Phase 4 — Security considerations
 
@@ -107,7 +107,7 @@ hyperfine --runs 5 'uv lock --check'
 
 ## Phase 5 — CI/CD pipeline integration (`deploy.yml`)
 
-- [x] Pin the action and tool: `astral-sh/setup-uv@v6` + `with: version: "0.11.13"` (replaces unpinned `@v4`).
+- [x] Pin the action and tool: `astral-sh/setup-uv@v6` + `with: version: "0.11.33"` (replaces unpinned `@v4`).
 - [x] Leverage action caching (`enable-cache: true`, default) and `cache-dependency-path: uv.lock`.
 - [x] Job sequence per PR: checkout → setup-uv → **`uv lock --check`** → `uv sync --frozen --group dev` → lint (`uv run flake8`) → tests (`uv run python manage.py test`).
 - [x] Replaced `uv pip install -r requirements/prod.txt` in CI with lock-based `uv sync --frozen --group dev` so CI tests exactly what ships.
@@ -125,14 +125,14 @@ Corrected builder stage (Track A — the implemented approach):
 ```dockerfile
 FROM python:3.12-slim AS builder
 ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1
-COPY --from=ghcr.io/astral-sh/uv:0.11.13@sha256:841c8e6fe30a8b07b4478d12d0c608cba6de66102d29d65d1cc423af86051563 /uv /usr/local/bin/uv
+COPY --from=ghcr.io/astral-sh/uv:0.11.33@sha256:77280f2f771df71f90786c314fe1bbc1e023feac652969bbf139c280babf2eb7 /uv /usr/local/bin/uv
 WORKDIR /app
 COPY pyproject.toml uv.lock ./
 RUN uv export --no-dev --format requirements-txt --output-file /tmp/requirements.txt && \
     uv pip install --system --require-hashes --no-cache -r /tmp/requirements.txt
 ```
 
-- [x] Pin uv image by digest (fixes F5); verified `sha256:841c8e6fe30a8b07b4478d12d0c608cba6de66102d29d65d1cc423af86051563` against the registry.
+- [x] Pin uv image by digest (fixes F5); verified `sha256:77280f2f771df71f90786c314fe1bbc1e023feac652969bbf139c280babf2eb7` against the registry.
 - [x] Copy `pyproject.toml` + `uv.lock` **before** application code for layer caching; dependency layer only rebuilds on dep changes.
 - [x] Install via `uv export --no-dev` + `uv pip install --system --require-hashes` — every artifact carries its hash from `uv.lock`; no unpinned installs at build time. (BuildKit `--mount=type=cache,target=/root/.cache/uv` is optional for faster rebuilds on `docker buildx` hosts.)
 - [x] Multi-stage: runtime stage contains only site-packages + runtime OS libs (`libpq5`); no build-essential, no uv binary, no `requirements/` in final image.

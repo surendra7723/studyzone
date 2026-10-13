@@ -31,7 +31,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: '0.11.13'
+          version: '0.11.33'
           python-version: '3.12.11'
           enable-cache: true
           cache-dependency-path: uv.lock
@@ -144,7 +144,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: '0.11.13'
+          version: '0.11.33'
           python-version: ${{ matrix.python-version }}
           enable-cache: true
           cache-dependency-path: uv.lock
@@ -168,7 +168,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: '0.11.13'
+          version: '0.11.33'
           python-version: '3.12.11'
           enable-cache: true
           cache-dependency-path: uv.lock
@@ -197,7 +197,7 @@ jobs:
       - name: Set up uv
         uses: astral-sh/setup-uv@v6
         with:
-          version: '0.11.13'
+          version: '0.11.33'
           python-version: '3.12.11'
           enable-cache: true
           cache-dependency-path: uv.lock
