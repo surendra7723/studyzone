@@ -120,7 +120,11 @@ jobs:
           curl -sSfL https://github.com/anchore/syft/releases/download/v1.20.0/syft_1.20.0_linux_amd64.tar.gz -o /tmp/syft.tgz
           tar -xzf /tmp/syft.tgz -C /tmp syft
           /tmp/syft studyzone:${{ github.sha }} -o json > sbom.json
-          curl -sSfL https://github.com/anchore/grype/releases/download/v0.91.0/grype_0.91.0_linux_amd64.tar.gz -o /tmp/grype.tgz
+          # grype < 0.116 cannot migrate the current vulnerability DB schema
+          # (anchore/grype#3586): "unable to migrate: UNIQUE constraint
+          # failed: operating_systems...". Keep this pin in sync with a
+          # release that supports the published DB schema.
+          curl -sSfL https://github.com/anchore/grype/releases/download/v0.120.1/grype_0.120.1_linux_amd64.tar.gz -o /tmp/grype.tgz
           tar -xzf /tmp/grype.tgz -C /tmp grype
           /tmp/grype studyzone:${{ github.sha }} --only-fixed --fail-on high
 

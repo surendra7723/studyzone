@@ -30,7 +30,7 @@
 
 - [x] **Consolidate the source of truth:** Track A implemented — all deps in `pyproject.toml` (`[project.dependencies]` + `[dependency-groups].dev`); `requirements/` deleted; `uv.lock` is the single lock.
 - [x] Use `uv lock` (never hand-edit `uv.lock`); update deliberately with `uv lock --upgrade` or `uv lock --upgrade-package <pkg>`.
-- [x] Time-based pin: `[tool.uv] exclude-newer = "2026-10-13"` so new upstream releases can't silently enter resolution.
+- [x] Time-based pin: `[tool.uv] exclude-newer = "2026-10-13T18:15:00Z"` (full RFC 3339 timestamp, matching `uv.lock` verbatim — date-only values are re-normalized per uv release and break `uv lock --check`) so new upstream releases can't silently enter resolution.
 - [x] Test resolution robustness: `uv lock --resolution lowest-direct` in a throwaway branch; CI may run this weekly.
 - [x] Git dependencies: none in this project (all from PyPI registry).
 - [x] Cross-platform check: `uv lock --check` passes on Linux; run on macOS/Windows before first release.

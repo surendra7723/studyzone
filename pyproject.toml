@@ -37,7 +37,10 @@ dev = [
 ]
 
 [tool.uv]
-exclude-newer = "2026-10-13"
+# Use a full RFC 3339 timestamp (matching uv.lock verbatim). A date-only value
+# is normalized differently across uv patch releases (end-of-day UTC), which
+# can make `uv lock --check` report the lockfile as stale in CI.
+exclude-newer = "2026-10-13T18:15:00Z"
 
 # Explicitly pin the package index so dependency resolution cannot be
 # redirected by ambient environment variables (e.g. PIP_INDEX_URL) or a
