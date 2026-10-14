@@ -39,10 +39,11 @@ services:
     plan: free
     region: singapore # change to your region
     buildCommand: pip install uv==0.11.13 && uv sync --frozen --no-dev --no-install-project
-    # Migrations run once per deploy, BEFORE traffic shifts to the new version.
-    preDeployCommand: .venv/bin/python manage.py migrate --noinput
-    # collectstatic needs env vars (SECRET_KEY), so it runs here, not at build.
+    # NOTE: preDeployCommand is NOT supported on Render's free compute plan.
+    # Migrations therefore run here, before daphne starts. `exec` replaces the
+    # shell so Render's SIGTERM reaches daphne directly.
     startCommand: >-
+      .venv/bin/python manage.py migrate --noinput &&
       .venv/bin/python manage.py collectstatic --noinput &&
       exec .venv/bin/python -m daphne
       --proxy-headers -b 0.0.0.0 -p $PORT config.asgi:application
@@ -67,7 +68,9 @@ services:
       - key: DATABASE_URL
         fromDatabase:
           name: studyzone-db
-          property: connectionString # internal = no egress fees
+          property: connectionString # schema-valid value; see note below
+      # Note: "internalConnectionString" avoids egress fees but is not in
+      # this schema version's enum, so "connectionString" is used instead.
       - key: DATABASE_SSL_REQUIRE
         value: "true"
 
@@ -111,84 +114,98 @@ services:
       - key: X_FRAME_OPTIONS
         value: DENY
 
-  # ---------- Celery Worker (requires paid plan: free tier has no workers) ----------
-  - type: worker
-    name: studyzone-celery
-    runtime: python
-    plan: 0.5c-512mb
-    region: singapore
-    buildCommand: pip install uv==0.11.13 && uv sync --frozen --no-dev --no-install-project
-    startCommand: .venv/bin/celery -A config worker -l info --concurrency=4
-    autoDeployTrigger: commit
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.11
-      - key: DJANGO_SETTINGS_MODULE
-        value: config.settings
-      - key: DEBUG
-        value: "False"
-      # Reuse the value Render generated for the web service, so both sign
-      # tokens with the same key. Do NOT use generateValue: true here — that
-      # would produce a second, different secret and break token validation.
-      - key: SECRET_KEY
-        fromService:
-          name: studyzone-web
-          type: web
-          envVarKey: SECRET_KEY
-      - key: DATABASE_URL
-        fromDatabase:
-          name: studyzone-db
-          property: connectionString
-      - key: CELERY_BROKER_URL
-        fromService:
-          type: keyvalue
-          name: studyzone-redis
-          property: connectionString
-      - key: CELERY_RESULT_BACKEND
-        fromService:
-          type: keyvalue
-          name: studyzone-redis
-          property: connectionString
-      # Worker must not force HTTPS redirects; it makes no HTTP requests.
-      - key: SECURE_SSL_REDIRECT
-        value: "false"
-
-  # ---------- Celery Beat (periodic tasks; requires paid plan) ----------
-  - type: worker
-    name: studyzone-beat
-    runtime: python
-    plan: 0.5c-512mb
-    region: singapore
-    buildCommand: pip install uv==0.11.13 && uv sync --frozen --no-dev --no-install-project
-    # Beat must run as a SINGLE instance. Do not increase numInstances or
-    # periodic tasks will be scheduled multiple times.
-    startCommand: .venv/bin/celery -A config beat -l info
-    autoDeployTrigger: commit
-    envVars:
-      - key: PYTHON_VERSION
-        value: 3.12.11
-      - key: DJANGO_SETTINGS_MODULE
-        value: config.settings
-      - key: DEBUG
-        value: "False"
-      - key: SECRET_KEY
-        fromService:
-          name: studyzone-web
-          type: web
-          envVarKey: SECRET_KEY
-      - key: DATABASE_URL
-        fromDatabase:
-          name: studyzone-db
-          property: connectionString
-      - key: CELERY_BROKER_URL
-        fromService:
-          type: keyvalue
-          name: studyzone-redis
-          property: connectionString
-      - key: CELERY_RESULT_BACKEND
-        fromService:
-          type: keyvalue
-          name: studyzone-redis
-          property: connectionString
-      - key: SECURE_SSL_REDIRECT
-        value: "false"
+# ============================================
+# RETIRED FOR FREE TIER — uncomment after upgrading to a paid plan
+# ============================================
+# Render's free compute plan supports ONLY web services, Postgres and Key
+# Value. Background workers (type: worker) require a paid instance type, so
+# both Celery services are commented out below.
+#
+# To enable after upgrading:
+#   1. Uncomment both blocks
+#   2. Bind this same repo to two new background worker services
+#   3. Verify `region` matches your Key Value instance
+#
+# Celery also needs CELERY_BROKER_URL / CELERY_RESULT_BACKEND, which are
+# already set on the web service above.
+#   # ---------- Celery Worker (requires paid plan: free tier has no workers) ----------
+#   - type: worker
+#     name: studyzone-celery
+#     runtime: python
+#     plan: 0.5c-512mb
+#     region: singapore
+#     buildCommand: pip install uv==0.11.13 && uv sync --frozen --no-dev --no-install-project
+#     startCommand: .venv/bin/celery -A config worker -l info --concurrency=4
+#     autoDeployTrigger: commit
+#     envVars:
+#       - key: PYTHON_VERSION
+#         value: 3.12.11
+#       - key: DJANGO_SETTINGS_MODULE
+#         value: config.settings
+#       - key: DEBUG
+#         value: "False"
+#       # Reuse the value Render generated for the web service, so both sign
+#       # tokens with the same key. Do NOT use generateValue: true here — that
+#       # would produce a second, different secret and break token validation.
+#       - key: SECRET_KEY
+#         fromService:
+#           name: studyzone-web
+#           type: web
+#           envVarKey: SECRET_KEY
+#       - key: DATABASE_URL
+#         fromDatabase:
+#           name: studyzone-db
+#           property: connectionString
+#       - key: CELERY_BROKER_URL
+#         fromService:
+#           type: keyvalue
+#           name: studyzone-redis
+#           property: connectionString
+#       - key: CELERY_RESULT_BACKEND
+#         fromService:
+#           type: keyvalue
+#           name: studyzone-redis
+#           property: connectionString
+#       # Worker must not force HTTPS redirects; it makes no HTTP requests.
+#       - key: SECURE_SSL_REDIRECT
+#         value: "false"
+#
+#   # ---------- Celery Beat (periodic tasks; requires paid plan) ----------
+#   - type: worker
+#     name: studyzone-beat
+#     runtime: python
+#     plan: 0.5c-512mb
+#     region: singapore
+#     buildCommand: pip install uv==0.11.13 && uv sync --frozen --no-dev --no-install-project
+#     # Beat must run as a SINGLE instance. Do not increase numInstances or
+#     # periodic tasks will be scheduled multiple times.
+#     startCommand: .venv/bin/celery -A config beat -l info
+#     autoDeployTrigger: commit
+#     envVars:
+#       - key: PYTHON_VERSION
+#         value: 3.12.11
+#       - key: DJANGO_SETTINGS_MODULE
+#         value: config.settings
+#       - key: DEBUG
+#         value: "False"
+#       - key: SECRET_KEY
+#         fromService:
+#           name: studyzone-web
+#           type: web
+#           envVarKey: SECRET_KEY
+#       - key: DATABASE_URL
+#         fromDatabase:
+#           name: studyzone-db
+#           property: connectionString
+#       - key: CELERY_BROKER_URL
+#         fromService:
+#           type: keyvalue
+#           name: studyzone-redis
+#           property: connectionString
+#       - key: CELERY_RESULT_BACKEND
+#         fromService:
+#           type: keyvalue
+#           name: studyzone-redis
+#           property: connectionString
+#       - key: SECURE_SSL_REDIRECT
+#         value: "false"
