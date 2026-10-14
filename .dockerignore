@@ -72,9 +72,10 @@ docs/
 *.md
 !README.md
 
-# CI/CD
+# CI/CD and deployment config
 .github/
 .gitlab-ci.yml
+render.yaml
 
 # Node modules (if any frontend assets)
 node_modules/

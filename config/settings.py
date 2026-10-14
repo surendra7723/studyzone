@@ -39,13 +39,50 @@ AUTH_USER_MODEL = "user.User"
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-dev-only-key")
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False")
+# Must parse the string: a non-empty "False" env value is truthy in Python,
+# which would wrongly enable DEBUG and pull in dev-only apps below.
+DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 
 ALLOWED_HOSTS = [
     host.strip()
     for host in os.getenv("ALLOWED_HOSTS", "").split(",")
     if host.strip()
+]
+
+# Trust Render's TLS-terminating proxy, otherwise request.is_secure() is
+# always False behind the load balancer.
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+
+# Production-only transport/cookie hardening. Env-driven and opt-in
+# (default false) so that running the test suite with DEBUG=False does not
+# turn every request into a redirect. Both deploy targets set these to true:
+#   - render.yaml          (SECURE_SSL_REDIRECT, SECURE_HSTS_SECONDS, ...)
+#   - docker-compose.prod.yml (same keys, see compose environment block)
+if not DEBUG:
+    SECURE_SSL_REDIRECT = (
+        os.getenv("SECURE_SSL_REDIRECT", "false").lower() == "true"
+    )
+    SECURE_HSTS_SECONDS = int(os.getenv("SECURE_HSTS_SECONDS", "0"))
+    SECURE_HSTS_INCLUDE_SUBDOMAINS = (
+        os.getenv("SECURE_HSTS_INCLUDE_SUBDOMAINS", "false").lower() == "true"
+    )
+    SECURE_HSTS_PRELOAD = (
+        os.getenv("SECURE_HSTS_PRELOAD", "false").lower() == "true"
+    )
+    SESSION_COOKIE_SECURE = (
+        os.getenv("SESSION_COOKIE_SECURE", "false").lower() == "true"
+    )
+    CSRF_COOKIE_SECURE = (
+        os.getenv("CSRF_COOKIE_SECURE", "false").lower() == "true"
+    )
+    X_FRAME_OPTIONS = os.getenv("X_FRAME_OPTIONS", "DENY")
+
+# Needed for form posts from a differently-hosted frontend.
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",")
+    if origin.strip()
 ]
 
 # Debug toolbar configuration

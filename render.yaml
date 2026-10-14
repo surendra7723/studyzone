@@ -1,0 +1,194 @@
+# ============================================
+# Render Blueprint — StudyZone Backend
+# ============================================
+# Reproducible infrastructure-as-code for the Render deployment.
+#
+# This project migrated from requirements/*.txt (pip) to pyproject.toml +
+# uv.lock. The build step installs uv, then installs exactly the locked
+# production dependency set into a project-local .venv. Start commands
+# reference .venv/bin so no global site-packages are needed.
+#
+# NAMES MATTER: Render adopts a resource only if the `name` below matches an
+# existing resource. If your existing web service / Postgres / Key Value use
+# different names, change these names to match BEFORE applying the blueprint,
+# or Render will create brand-new resources alongside the old ones.
+#
+# See the "Applying this blueprint" notes in the commit/deploy summary, or
+# run:  render blueprints validate render.yaml   (Render CLI v2.7.0+)
+# ============================================
+
+databases:
+  - name: studyzone-db
+    databaseName: studyzone
+    user: studyzone
+    plan: free # free Postgres expires; upgrade for production
+
+services:
+  # ---------- Redis (Celery broker, Channels, presence) ----------
+  - type: keyvalue
+    name: studyzone-redis
+    plan: free
+    region: singapore # must match the region of every service using it
+    maxmemoryPolicy: noeviction # never evict keys: broker/queue safety
+    ipAllowList: [] # internal-only (required field for keyvalue)
+
+  # ---------- Django Web (ASGI via daphne) ----------
+  - type: web
+    name: studyzone-web
+    runtime: python
+    plan: free
+    region: singapore # change to your region
+    buildCommand: pip install uv==0.11.13 && uv sync --frozen --no-dev --no-install-project
+    # Migrations run once per deploy, BEFORE traffic shifts to the new version.
+    preDeployCommand: .venv/bin/python manage.py migrate --noinput
+    # collectstatic needs env vars (SECRET_KEY), so it runs here, not at build.
+    startCommand: >-
+      .venv/bin/python manage.py collectstatic --noinput &&
+      exec .venv/bin/python -m daphne
+      --proxy-headers -b 0.0.0.0 -p $PORT config.asgi:application
+    healthCheckPath: /api/health/
+    autoDeployTrigger: commit
+    envVars:
+      # Python version must match .python-version / requires-python in pyproject.toml.
+      # REQUIRED: without it Render may provision Python 3.13 and `uv sync`
+      # fails because requires-python is ">=3.12,<3.13".
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+      - key: SECRET_KEY
+        generateValue: true # Render generates and persists this securely
+      - key: DEBUG
+        value: "False"
+      - key: ALLOWED_HOSTS
+        value: studyzone-web.onrender.com
+
+      # --- Database ---
+      - key: DATABASE_URL
+        fromDatabase:
+          name: studyzone-db
+          property: connectionString # internal = no egress fees
+      - key: DATABASE_SSL_REQUIRE
+        value: "true"
+
+      # --- Redis-backed services ---
+      # IMPORTANT: the app reads CELERY_BROKER_URL / CHANNEL_REDIS_URL,
+      # NOT REDIS_URL. Setting only REDIS_URL leaves Celery pointed at
+      # localhost and workers/web sockets will fail to connect.
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: studyzone-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: studyzone-redis
+          property: connectionString
+      - key: CHANNEL_REDIS_URL
+        fromService:
+          type: keyvalue
+          name: studyzone-redis
+          property: connectionString
+      # Optional: falls back to CELERY_BROKER_URL if unset (see settings.py:204)
+
+      # --- Transport / cookie hardening ---
+      # settings.py defaults these to false so that running the test suite
+      # with DEBUG=False does not redirect every request. Production opts in
+      # explicitly here (render terminates TLS at its proxy).
+      - key: SECURE_SSL_REDIRECT
+        value: "true"
+      - key: SECURE_HSTS_SECONDS
+        value: "31536000"
+      - key: SECURE_HSTS_INCLUDE_SUBDOMAINS
+        value: "true"
+      - key: SECURE_HSTS_PRELOAD
+        value: "true"
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: CSRF_COOKIE_SECURE
+        value: "true"
+      - key: X_FRAME_OPTIONS
+        value: DENY
+
+  # ---------- Celery Worker (requires paid plan: free tier has no workers) ----------
+  - type: worker
+    name: studyzone-celery
+    runtime: python
+    plan: 0.5c-512mb
+    region: singapore
+    buildCommand: pip install uv==0.11.13 && uv sync --frozen --no-dev --no-install-project
+    startCommand: .venv/bin/celery -A config worker -l info --concurrency=4
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+      - key: DEBUG
+        value: "False"
+      # Reuse the value Render generated for the web service, so both sign
+      # tokens with the same key. Do NOT use generateValue: true here — that
+      # would produce a second, different secret and break token validation.
+      - key: SECRET_KEY
+        fromService:
+          name: studyzone-web
+          type: web
+          envVarKey: SECRET_KEY
+      - key: DATABASE_URL
+        fromDatabase:
+          name: studyzone-db
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: studyzone-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: studyzone-redis
+          property: connectionString
+      # Worker must not force HTTPS redirects; it makes no HTTP requests.
+      - key: SECURE_SSL_REDIRECT
+        value: "false"
+
+  # ---------- Celery Beat (periodic tasks; requires paid plan) ----------
+  - type: worker
+    name: studyzone-beat
+    runtime: python
+    plan: 0.5c-512mb
+    region: singapore
+    buildCommand: pip install uv==0.11.13 && uv sync --frozen --no-dev --no-install-project
+    # Beat must run as a SINGLE instance. Do not increase numInstances or
+    # periodic tasks will be scheduled multiple times.
+    startCommand: .venv/bin/celery -A config beat -l info
+    autoDeployTrigger: commit
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.11
+      - key: DJANGO_SETTINGS_MODULE
+        value: config.settings
+      - key: DEBUG
+        value: "False"
+      - key: SECRET_KEY
+        fromService:
+          name: studyzone-web
+          type: web
+          envVarKey: SECRET_KEY
+      - key: DATABASE_URL
+        fromDatabase:
+          name: studyzone-db
+          property: connectionString
+      - key: CELERY_BROKER_URL
+        fromService:
+          type: keyvalue
+          name: studyzone-redis
+          property: connectionString
+      - key: CELERY_RESULT_BACKEND
+        fromService:
+          type: keyvalue
+          name: studyzone-redis
+          property: connectionString
+      - key: SECURE_SSL_REDIRECT
+        value: "false"
